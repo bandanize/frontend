@@ -8,7 +8,7 @@ import { Music2 } from 'lucide-react';
 
 export function Login() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showRegister, setShowRegister] = useState(false);
@@ -17,9 +17,9 @@ export function Login() {
     e.preventDefault();
     setError('');
     try {
-      await login(email, password);
+      await login(username, password);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Error al iniciar sesión');
     }
   };
 
@@ -42,13 +42,13 @@ export function Login() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Usuario</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="Nombre de usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
@@ -90,15 +90,16 @@ function Register({ onBack }: { onBack: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
-      await register(email, password, name);
+      await register(email, password, name, username);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Error al registrarse');
     }
   };
 
@@ -121,9 +122,20 @@ function Register({ onBack }: { onBack: () => void }) {
               <Input
                 id="name"
                 type="text"
-                placeholder="Tu nombre"
+                placeholder="Tu nombre completo"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="username">Usuario</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Nombre de usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
