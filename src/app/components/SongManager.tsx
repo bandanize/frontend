@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useProjects, Song } from '@/contexts/ProjectContext';
+import React, { useState, useEffect } from 'react';
+import { useProjects, Song, SongList, Project } from '@/contexts/ProjectContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -10,15 +10,69 @@ import { Plus, Trash2, Music, ChevronRight, Edit } from 'lucide-react';
 import { SongDetail } from '@/app/components/SongDetail';
 import { toast } from 'sonner';
 
+// Inline component for editing list metadata with auto-save
+const SongListEditor = ({ list, currentProject, onDelete }: { list: SongList, currentProject: Project, onDelete: (id: string) => void }) => {
+  const { updateSongList } = useProjects();
+  const [name, setName] = useState(list.name);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Debounced Auto-save
+  useEffect(() => {
+    if (!currentProject || name === list.name) return;
+
+    setIsSaving(true);
+    const timer = setTimeout(() => {
+      updateSongList(currentProject.id, list.id, name)
+        .then(() => setIsSaving(false))
+        .catch(() => setIsSaving(false));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [name]);
+
+  return (
+    <div className="flex items-center gap-2 mb-4 p-1">
+        <div className="flex-1">
+          <Label htmlFor={`list-name-${list.id}`} className="sr-only">Nombre de la lista</Label>
+          <Input 
+            id={`list-name-${list.id}`}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-9"
+          />
+        </div>
+        <div className="flex items-center gap-2 min-w-[100px] justify-end">
+            {isSaving ? (
+                <span className="text-xs text-blue-600 animate-pulse whitespace-nowrap flex items-center">
+                    <span className="size-1.5 bg-blue-600 rounded-full mr-1.5"></span>
+                    Guardando
+                </span>
+            ) : (
+                <span className="text-xs text-gray-400 whitespace-nowrap flex items-center">
+                    <span className="size-1.5 bg-green-500 rounded-full mr-1.5"></span>
+                    Guardado
+                </span>
+            )}
+            <Button
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
+                onClick={() => onDelete(list.id)}
+            >
+                <Trash2 className="size-4" />
+            </Button>
+        </div>
+    </div>
+  );
+};
+
 export function SongManager() {
   const { currentProject, createSongList, updateSongList, deleteSongList, createSong } = useProjects();
   const [openListDialog, setOpenListDialog] = useState(false);
   const [openSongDialog, setOpenSongDialog] = useState(false);
-  const [openEditListDialog, setOpenEditListDialog] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [selectedSongRef, setSelectedSongRef] = useState<{ listId: string; songId: string } | null>(null);
   const [listName, setListName] = useState('');
-  const [editListData, setEditListData] = useState({ id: '', name: '' });
   const [songData, setSongData] = useState({
     name: '',
     originalBand: '',
@@ -34,17 +88,7 @@ export function SongManager() {
     toast.success('Lista creada');
   };
 
-  const handleEditList = (listId: string, currentName: string) => {
-    setEditListData({ id: listId, name: currentName });
-    setOpenEditListDialog(true);
-  };
-
-  const handleUpdateList = () => {
-    if (!currentProject || !editListData.name.trim()) return;
-    updateSongList(currentProject.id, editListData.id, editListData.name);
-    setOpenEditListDialog(false);
-    toast.success('Lista actualizada');
-  };
+  // handleEditList and handleUpdateList removed (replaced by inline editor)
 
   const handleDeleteList = (listId: string) => {
     if (!currentProject) return;
@@ -146,25 +190,11 @@ export function SongManager() {
                 </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-2 pt-2">
-                      <div className="flex justify-end gap-2 mb-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditList(list.id, list.name)}
-                        >
-                          <Edit className="size-4 mr-2" />
-                          Renombrar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDeleteList(list.id)}
-                        >
-                          <Trash2 className="size-4 mr-2" />
-                          Eliminar
-                        </Button>
-                      </div>
+                      <SongListEditor 
+                        list={list} 
+                        currentProject={currentProject} 
+                        onDelete={handleDeleteList} 
+                      />
                       <Button
                         variant="outline"
                         size="sm"
@@ -264,30 +294,7 @@ export function SongManager() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={openEditListDialog} onOpenChange={setOpenEditListDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar lista de canciones</DialogTitle>
-            <DialogDescription>
-              Cambia el nombre de la lista
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="list-name">Nombre de la lista</Label>
-              <Input
-                id="list-name"
-                placeholder="Ej: Álbum 2024"
-                value={editListData.name}
-                onChange={(e) => setEditListData({ ...editListData, name: e.target.value })}
-              />
-            </div>
-            <Button onClick={handleUpdateList} className="w-full">
-              Actualizar lista
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }

@@ -186,6 +186,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   // Local state for active tablature editing
   const [editingContent, setEditingContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingSong, setIsSavingSong] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Derive selectedTab from props to ensure it's always up to date
@@ -198,11 +199,10 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     }
   }, [selectedTabId]); 
 
-  // Debounced Auto-save
+  // Debounced Auto-save for Tablature
   useEffect(() => {
     if (!selectedTabId || !currentProject) return;
     
-    // Skip if content matches what we already have (prevents initial load trigger)
     if (selectedTab?.content === editingContent) return;
 
     setIsSaving(true);
@@ -210,10 +210,36 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
       updateTablature(currentProject.id, listId, song.id, selectedTabId, { content: editingContent })
         .then(() => setIsSaving(false))
         .catch(() => setIsSaving(false));
-    }, 1000); // Wait 1s after last keystroke
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [editingContent, selectedTabId]);
+
+  // Debounced Auto-save for Song
+  useEffect(() => {
+    if (!currentProject) return;
+
+    // Skip if nothing changed from initial props (rough check)
+    // Note: This simple check might skip valid updates if only 1 field changed back to initial.
+    // A better approach is to rely on user interaction or memoize previous state, 
+    // but for now we assume any change in editSongData that differs from props triggers save.
+    const hasChanges = 
+        editSongData.name !== (song.name || '') ||
+        editSongData.originalBand !== (song.originalBand || '') ||
+        editSongData.bpm !== (song.bpm || 0) ||
+        editSongData.key !== (song.key || '');
+
+    if (!hasChanges) return;
+
+    setIsSavingSong(true);
+    const timer = setTimeout(() => {
+      updateSong(currentProject.id, listId, song.id, editSongData)
+        .then(() => setIsSavingSong(false))
+        .catch(() => setIsSavingSong(false));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [editSongData]);
 
   const handleInsertText = (text: string) => {
     if (!textareaRef.current) return;
@@ -239,11 +265,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     }, 0);
   };
 
-  const handleSaveSong = () => {
-    if (!currentProject) return;
-    updateSong(currentProject.id, listId, song.id, editSongData);
-    toast.success('Canción guardada correctamente');
-  };
+  // Removed manual handleSaveSong
 
   const handleCreateTablature = () => {
     if (!currentProject || !tabData.name.trim()) return;
@@ -280,8 +302,6 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     if (!currentProject) return;
     updateTablature(currentProject.id, listId, song.id, tabId, { content });
   };
-
-
 
   const handleFileUpload = (type: 'song' | 'tab', tabId?: string) => {
     // Simulated file upload
@@ -325,11 +345,18 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
-                <Button onClick={handleSaveSong} className="bg-green-600 hover:bg-green-700">
-                    <File className="size-4 mr-2" />
-                    Guardar cambios
-                </Button>
+            <div className="flex gap-2 items-center">
+                {isSavingSong ? (
+                    <span className="text-xs text-blue-600 animate-pulse flex items-center mr-2">
+                        <span className="size-2 bg-blue-600 rounded-full mr-2"></span>
+                        Guardando...
+                    </span>
+                ) : (
+                    <span className="text-xs text-gray-400 flex items-center mr-2">
+                        <span className="size-2 bg-green-500 rounded-full mr-2"></span>
+                        Guardado
+                    </span>
+                )}
                 <Button variant="destructive" onClick={handleDeleteSong}>
                 <Trash2 className="size-4 mr-2" />
                 Eliminar canción
