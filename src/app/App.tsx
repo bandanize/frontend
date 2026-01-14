@@ -43,7 +43,7 @@ function AppRoutes() {
           </PrivateRoute>
         }
       />
-      <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={<Navigate to="/dashboard" />} />
     </Routes>
   );
 }
