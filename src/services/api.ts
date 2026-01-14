@@ -27,9 +27,12 @@ api.interceptors.response.use(
     (error) => {
         // Handle 401 Unauthorized and 403 Forbidden
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('currentUser');
-            window.location.href = '/login';
+            // Don't redirect if it's a login attempt failure (invalid credentials)
+            if (!error.config.url.includes('/auth/login')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('currentUser');
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
