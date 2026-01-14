@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import api from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -29,7 +30,7 @@ export function UserProfile() {
     toast.success('Perfil actualizado correctamente');
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error('Las contraseñas no coinciden');
       return;
@@ -39,13 +40,20 @@ export function UserProfile() {
       return;
     }
     
-    // Simulated password change
-    toast.success('Contraseña actualizada correctamente');
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    });
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      toast.success('Contraseña actualizada correctamente');
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (error: any) {
+      toast.error(error.response?.data || 'Error al actualizar la contraseña');
+    }
   };
 
   return (
