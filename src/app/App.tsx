@@ -6,6 +6,7 @@ import { Login } from '@/pages/Login';
 import { Dashboard } from '@/pages/Dashboard';
 import { ProjectHub } from '@/pages/ProjectHub';
 import { UserProfile } from '@/pages/UserProfile';
+import { InvitationsPage } from '@/pages/InvitationsPage';
 import { Toaster } from '@/app/components/ui/sonner';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <ProjectHub />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/invitations"
+        element={
+          <PrivateRoute>
+            <InvitationsPage />
           </PrivateRoute>
         }
       />

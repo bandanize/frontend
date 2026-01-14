@@ -12,7 +12,7 @@ import { cn } from "@/app/components/ui/utils";
 import api from '@/services/api';
 
 export function MembersPanel() {
-  const { currentProject, addMember } = useProjects();
+  const { currentProject, inviteMember } = useProjects();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   
@@ -43,17 +43,17 @@ export function MembersPanel() {
     return () => clearTimeout(debounceTimer);
   }, [searchValue]);
 
-  const handleAddMember = async () => {
+  const handleInviteMember = async () => {
     if (!currentProject || !email) return;
 
     try {
-      await addMember(currentProject.id, email);
-      toast.success('Miembro añadido correctamente');
+      await inviteMember(currentProject.id, email);
+      toast.success('Invitación enviada correctamente');
       setEmail('');
       setSearchValue('');
       setOpen(false);
     } catch (err: any) {
-      toast.error(err.message || 'Error al añadir miembro');
+      toast.error(err.message || 'Error al enviar invitación');
     }
   };
 
@@ -133,7 +133,7 @@ export function MembersPanel() {
                       </PopoverContent>
                     </Popover>
                   </div>
-                  <Button onClick={handleAddMember} className="w-full" disabled={!email}>
+                  <Button onClick={handleInviteMember} className="w-full" disabled={!email}>
                     Invitar al proyecto
                   </Button>
                 </div>

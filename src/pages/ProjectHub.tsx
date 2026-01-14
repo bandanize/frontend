@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
-import { ArrowLeft, MessageSquare, Music, Users, Settings } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Music, Users, Settings, LogOut } from 'lucide-react';
 import { ProjectChat } from '@/app/components/ProjectChat';
 import { SongManager } from '@/app/components/SongManager';
 import { MembersPanel } from '@/app/components/MembersPanel';
@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 export function ProjectHub() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { currentProject, updateProject } = useProjects();
+  const { currentProject, updateProject, leaveProject } = useProjects();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('songs');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -50,6 +50,18 @@ export function ProjectHub() {
     }
   };
 
+  const handleLeaveProject = async () => {
+    if (!currentProject || !window.confirm('¿Estás seguro de que quieres abandonar este proyecto?')) return;
+    try {
+        await leaveProject(currentProject.id);
+        toast.success('Has abandonado el proyecto');
+        navigate('/dashboard');
+    } catch (error) {
+        console.error('Error leaving project:', error);
+        toast.error('Error al abandonar el proyecto');
+    }
+  };
+
   if (!currentProject || currentProject.id !== projectId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -75,51 +87,60 @@ export function ProjectHub() {
               <h1 className="text-2xl font-bold text-gray-900">{currentProject.name}</h1>
               <p className="text-sm text-gray-600">{currentProject.description}</p>
             </div>
-            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Settings className="size-4 mr-2" />
-                  Editar proyecto
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Editar proyecto</DialogTitle>
-                  <DialogDescription>
-                    Actualiza la información del proyecto
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-name">Nombre del proyecto</Label>
-                    <Input
-                      id="edit-name"
-                      value={editData.name}
-                      onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-description">Descripción</Label>
-                    <Textarea
-                      id="edit-description"
-                      value={editData.description}
-                      onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-image">URL de imagen (opcional)</Label>
-                    <Input
-                      id="edit-image"
-                      value={editData.imageUrl}
-                      onChange={(e) => setEditData({ ...editData, imageUrl: e.target.value })}
-                    />
-                  </div>
-                  <Button onClick={handleUpdateProject} className="w-full">
-                    Guardar cambios
+            <div className="flex gap-2">
+            {currentProject.ownerId === user?.id ? (
+              <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Settings className="size-4 mr-2" />
+                    Editar proyecto
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Editar proyecto</DialogTitle>
+                    <DialogDescription>
+                      Actualiza la información del proyecto
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Nombre del proyecto</Label>
+                      <Input
+                        id="edit-name"
+                        value={editData.name}
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-description">Descripción</Label>
+                      <Textarea
+                        id="edit-description"
+                        value={editData.description}
+                        onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-image">URL de imagen (opcional)</Label>
+                      <Input
+                        id="edit-image"
+                        value={editData.imageUrl}
+                        onChange={(e) => setEditData({ ...editData, imageUrl: e.target.value })}
+                      />
+                    </div>
+                    <Button onClick={handleUpdateProject} className="w-full">
+                      Guardar cambios
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            ) : (
+                <Button variant="destructive" onClick={handleLeaveProject}>
+                    <LogOut className="size-4 mr-2" />
+                    Abandonar
+                </Button>
+            )}
+            </div>
           </div>
         </div>
       </header>

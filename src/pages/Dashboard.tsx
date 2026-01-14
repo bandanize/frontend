@@ -7,14 +7,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
-import { LogOut, Plus, Music2, Users, User, Settings } from 'lucide-react';
+import { LogOut, Plus, Music2, Users, User, Settings, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WelcomeModal } from '@/app/components/WelcomeModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/app/components/ui/dropdown-menu';
 
 export function Dashboard() {
   const { user, logout } = useAuth();
-  const { projects, createProject, selectProject } = useProjects();
+  const { projects, createProject, selectProject, invitations } = useProjects();
   const [open, setOpen] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
@@ -69,12 +69,26 @@ export function Dashboard() {
                 <Button variant="outline">
                   <User className="size-4 mr-2" />
                   {user?.name}
+                  {(invitations?.length || 0) > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                      {invitations.length}
+                    </span>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <Settings className="size-4 mr-2" />
                   Mi Perfil
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/invitations')}>
+                  <Mail className="size-4 mr-2" />
+                  Invitaciones
+                  {(invitations?.length || 0) > 0 && (
+                    <span className="ml-auto bg-red-100 text-red-600 text-xs rounded-full px-2 py-0.5">
+                      {invitations.length}
+                    </span>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>

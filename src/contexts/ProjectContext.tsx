@@ -63,13 +63,24 @@ export interface Project {
   createdAt: Date;
 }
 
+export interface Invitation {
+  id: string;
+  bandId: string;
+  bandName: string;
+}
+
 interface ProjectContextType {
   projects: Project[];
+  invitations: Invitation[];
   currentProject: Project | null;
   createProject: (name: string, description: string, imageUrl?: string) => Promise<void>;
   updateProject: (projectId: string, data: Partial<Project>) => Promise<void>;
   selectProject: (projectId: string) => void;
-  addMember: (projectId: string, email: string) => void;
+  inviteMember: (projectId: string, email: string) => Promise<void>;
+  leaveProject: (projectId: string) => Promise<void>;
+  fetchInvitations: () => Promise<void>;
+  acceptInvitation: (invitationId: string) => Promise<void>;
+  rejectInvitation: (invitationId: string) => Promise<void>;
   sendMessage: (projectId: string, message: string) => void;
   createSongList: (projectId: string, name: string) => void;
   updateSongList: (projectId: string, listId: string, name: string) => void;
@@ -89,14 +100,17 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
   // Fetch projects from API
   useEffect(() => {
     if (user) {
       fetchProjects();
+      fetchInvitations();
     } else {
       setProjects([]);
+      setInvitations([]);
     }
   }, [user]);
 
@@ -109,7 +123,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         name: band.name,
         description: band.description,
         imageUrl: band.photo,
-        ownerId: user?.id || '', // ownerId is not returned, assume current user for now or irrelevant
+        ownerId: band.ownerId ? String(band.ownerId) : (user?.id || ''), // Use backend ownerId
         members: band.members ? band.members.map((m: any) => ({
           id: String(m.id),
           name: m.name,
@@ -154,6 +168,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       setProjects(mappedProjects);
     } catch (error) {
       console.error("Error fetching projects", error);
+    }
+  };
+  
+  const fetchInvitations = async () => {
+    try {
+        const response = await api.get('/invitations/mine');
+        setInvitations(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+        console.error("Error fetching invitations", error);
     }
   };
 
@@ -216,6 +239,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           }
     } catch (error) {
         console.error("Error updating project", error);
+        throw error;
     }
   };
 
@@ -224,23 +248,48 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setCurrentProject(project || null);
   };
 
-  const addMember = async (projectId: string, email: string) => {
+  const inviteMember = async (projectId: string, email: string) => {
     try {
-        const response = await api.post(`/bands/${projectId}/members`, { email });
-        const updatedBand = response.data;
-        
-        updateLocalProject(projectId, (p) => ({
-            ...p,
-            members: updatedBand.members.map((m: any) => ({
-                id: String(m.id),
-                name: m.name,
-                email: m.email
-            }))
-        }));
+        await api.post(`/bands/${projectId}/invite`, { email });
+        // Don't update local member list yet as it is pending
     } catch (error) {
-        console.error("Error adding member", error);
+        console.error("Error inviting member", error);
         throw error;
     }
+  };
+  
+  const acceptInvitation = async (invitationId: string) => {
+      try {
+          await api.post(`/invitations/${invitationId}/accept`);
+          await fetchInvitations();
+          await fetchProjects(); // Refresh projects to see the new one
+      } catch (error) {
+          console.error("Error accepting invitation", error);
+          throw error;
+      }
+  };
+  
+  const rejectInvitation = async (invitationId: string) => {
+      try {
+          await api.post(`/invitations/${invitationId}/reject`);
+          await fetchInvitations();
+      } catch (error) {
+          console.error("Error rejecting invitation", error);
+          throw error;
+      }
+  };
+  
+  const leaveProject = async (projectId: string) => {
+      try {
+          await api.post(`/bands/${projectId}/leave`);
+          setProjects(projects.filter(p => p.id !== projectId));
+          if (currentProject?.id === projectId) {
+              setCurrentProject(null);
+          }
+      } catch (error) {
+          console.error("Error leaving project", error);
+          throw error;
+      }
   };
 
   const sendMessage = async (projectId: string, message: string) => {
@@ -375,8 +424,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
              content: t.content,
              files: []
         };
-        // Update local state is tricky purely for deep nesting, but simpler if we just fetch fresh project data or update deeply
-        // For now, deep update:
+        
          updateLocalProject(projectId, (p) => ({
           ...p,
           songLists: p.songLists.map(l => l.id === listId ? {
@@ -442,11 +490,16 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   return (
     <ProjectContext.Provider value={{
       projects,
+      invitations,
       currentProject,
       createProject,
       updateProject,
       selectProject,
-      addMember,
+      inviteMember,
+      leaveProject,
+      fetchInvitations,
+      acceptInvitation,
+      rejectInvitation,
       sendMessage,
       createSongList,
       updateSongList,
