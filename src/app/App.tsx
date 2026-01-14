@@ -1,0 +1,62 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { ProjectProvider } from '@/contexts/ProjectContext';
+import { Login } from '@/pages/Login';
+import { Dashboard } from '@/pages/Dashboard';
+import { ProjectHub } from '@/pages/ProjectHub';
+import { UserProfile } from '@/pages/UserProfile';
+import { Toaster } from '@/app/components/ui/sonner';
+
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return user ? <>{children}</> : <Navigate to="/login" />;
+}
+
+function AppRoutes() {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <PrivateRoute>
+            <UserProfile />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/project/:projectId"
+        element={
+          <PrivateRoute>
+            <ProjectHub />
+          </PrivateRoute>
+        }
+      />
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <ProjectProvider>
+          <AppRoutes />
+          <Toaster />
+        </ProjectProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
