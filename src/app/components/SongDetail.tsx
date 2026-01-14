@@ -174,7 +174,22 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     name: '',
     tuning: 'Standard (EADGBE)',
   });
+  
+  // Local state for song editing
+  const [editSongData, setEditSongData] = useState({
+    name: song.name || '',
+    originalBand: song.originalBand || '',
+    bpm: song.bpm || 0,
+    key: song.key || '',
+  });
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSaveSong = () => {
+    if (!currentProject) return;
+    updateSong(currentProject.id, listId, song.id, editSongData);
+    toast.success('Canción guardada correctamente');
+  };
 
   const handleCreateTablature = () => {
     if (!currentProject || !tabData.name.trim()) return;
@@ -261,6 +276,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     return <Icon className="size-4" />;
   };
 
+  // Update return JSX
   return (
     <div className="space-y-6">
       <Card>
@@ -273,14 +289,20 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
               <div>
                 <CardTitle className="text-2xl">{song.name}</CardTitle>
                 <p className="text-gray-600 mt-1">
-                  {song.bandName} • {song.bpm} BPM • {song.key}
+                  {song.originalBand || song.bandName} • {song.bpm} BPM • {song.key}
                 </p>
               </div>
             </div>
-            <Button variant="destructive" onClick={handleDeleteSong}>
-              <Trash2 className="size-4 mr-2" />
-              Eliminar canción
-            </Button>
+            <div className="flex gap-2">
+                <Button onClick={handleSaveSong} className="bg-green-600 hover:bg-green-700">
+                    <File className="size-4 mr-2" />
+                    Guardar cambios
+                </Button>
+                <Button variant="destructive" onClick={handleDeleteSong}>
+                <Trash2 className="size-4 mr-2" />
+                Eliminar canción
+                </Button>
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -295,35 +317,37 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
             <div className="space-y-2">
               <Label>Nombre</Label>
               <Input
-                value={song.name}
-                onChange={(e) => currentProject && updateSong(currentProject.id, listId, song.id, { name: e.target.value })}
+                value={editSongData.name}
+                onChange={(e) => setEditSongData({ ...editSongData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>Banda</Label>
               <Input
-                value={song.bandName}
-                onChange={(e) => currentProject && updateSong(currentProject.id, listId, song.id, { bandName: e.target.value })}
+                value={editSongData.originalBand}
+                placeholder="Ej: The Beatles"
+                onChange={(e) => setEditSongData({ ...editSongData, originalBand: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>BPM</Label>
               <Input
                 type="number"
-                value={song.bpm}
-                onChange={(e) => currentProject && updateSong(currentProject.id, listId, song.id, { bpm: parseInt(e.target.value) || 120 })}
+                value={editSongData.bpm}
+                onChange={(e) => setEditSongData({ ...editSongData, bpm: parseInt(e.target.value) || 0 })}
               />
             </div>
             <div className="space-y-2">
               <Label>Tonalidad</Label>
               <Input
-                value={song.key}
-                onChange={(e) => currentProject && updateSong(currentProject.id, listId, song.id, { key: e.target.value })}
+                value={editSongData.key}
+                onChange={(e) => setEditSongData({ ...editSongData, key: e.target.value })}
               />
             </div>
           </div>
         </CardContent>
       </Card>
+      {/* ... rest of the component */}
 
       {/* Archivos y media */}
       <Card>
@@ -495,7 +519,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                         <Label>Tablatura (estilo Ultimate Guitar)</Label>
                         <Textarea
                           ref={textareaRef}
-                          value={selectedTab.content}
+                          value={selectedTab.content || ''}
                           onChange={(e) => handleUpdateTabContent(selectedTab.id, e.target.value)}
                           placeholder="Escribe tu tablatura aquí..."
                           className="font-mono text-sm min-h-[300px]"

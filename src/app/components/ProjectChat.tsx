@@ -31,6 +31,7 @@ export function ProjectChat() {
   };
 
   const highlightMentions = (text: string) => {
+    if (!text) return null;
     const parts = text.split(/(@\w+)/g);
     return parts.map((part, index) => {
       if (part.startsWith('@')) {

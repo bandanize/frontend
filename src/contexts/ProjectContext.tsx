@@ -38,6 +38,7 @@ export interface Song {
   id: string;
   name: string;
   bandName: string;
+  originalBand?: string;
   bpm: number;
   key: string;
   files: MediaFile[];
@@ -73,7 +74,7 @@ interface ProjectContextType {
   createSongList: (projectId: string, name: string) => void;
   updateSongList: (projectId: string, listId: string, name: string) => void;
   deleteSongList: (projectId: string, listId: string) => void;
-  createSong: (projectId: string, listId: string, song: Omit<Song, 'id' | 'tablatures' | 'files'>) => void;
+  createSong: (projectId: string, listId: string, song: Omit<Song, 'id' | 'tablatures' | 'files' | 'bandName'>) => void;
   updateSong: (projectId: string, listId: string, songId: string, data: Partial<Song>) => void;
   deleteSong: (projectId: string, listId: string, songId: string) => void;
   addSongFile: (projectId: string, listId: string, songId: string, file: Omit<MediaFile, 'id'>) => void;
@@ -109,14 +110,46 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         description: band.description,
         imageUrl: band.photo,
         ownerId: user?.id || '', // ownerId is not returned, assume current user for now or irrelevant
-        members: band.members.map((m: any) => ({
+        members: band.members ? band.members.map((m: any) => ({
           id: String(m.id),
           name: m.name,
           email: m.email
-        })),
-        songLists: [], // Not supported by backend yet
-        chat: [], // Not supported by backend yet
-        createdAt: new Date(), // Not returned by backend yet
+        })) : band.users ? band.users.map((u: any) => ({ // Fallback if backend returns users list
+          id: String(u.id),
+          name: u.name,
+          email: u.email
+        })) : [],
+        songLists: band.songLists ? band.songLists.map((list: any) => ({
+          id: String(list.id),
+          name: list.name,
+          songs: list.songs ? list.songs.map((song: any) => ({
+            id: String(song.id),
+            name: song.name,
+            bandName: band.name,
+            originalBand: song.originalBand,
+            bpm: song.bpm,
+            key: song.songKey,
+            files: song.files || [],
+            tablatures: song.tablatures ? song.tablatures.map((tab: any) => ({
+              id: String(tab.id),
+              name: tab.name,
+              instrument: tab.instrument,
+              instrumentIcon: tab.instrumentIcon,
+              tuning: tab.tuning,
+              content: tab.content,
+              files: tab.files || []
+            })) : []
+          })) : []
+        })) : [],
+        chat: band.chatMessages ? band.chatMessages.map((msg: any) => ({
+          id: String(msg.id),
+          userId: String(msg.sender.id),
+          userName: msg.sender.name,
+          message: msg.message,
+          timestamp: new Date(msg.timestamp),
+          mentions: [] // Mentions filtering logic can be added if needed, or derived
+        })) : [],
+        createdAt: new Date(),
       }));
       setProjects(mappedProjects);
     } catch (error) {
@@ -196,81 +229,183 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     console.warn("addMember: Backend does not support adding members by email yet via this context.");
   };
 
-  const sendMessage = (projectId: string, message: string) => {
+  const sendMessage = async (projectId: string, message: string) => {
     if (!user) return;
-    const mentions = message.match(/@\w+/g) || [];
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      userId: user.id,
-      userName: user.name,
-      message,
-      timestamp: new Date(),
-      mentions: mentions.map(m => m.substring(1)),
-    };
-    updateLocalProject(projectId, (p) => ({ ...p, chat: [...p.chat, newMessage] }));
+    try {
+        const response = await api.post(`/bands/${projectId}/chat`, {
+            userId: user.id,
+            message: message
+        });
+        const msg = response.data;
+        const newMessage: ChatMessage = {
+          id: String(msg.id),
+          userId: String(msg.sender.id),
+          userName: msg.sender.name,
+          message: msg.message,
+          timestamp: new Date(msg.timestamp),
+          mentions: [],
+        };
+        updateLocalProject(projectId, (p) => ({ ...p, chat: [...p.chat, newMessage] }));
+    } catch (error) {
+        console.error("Error sending message", error);
+    }
   };
 
-  const createSongList = (projectId: string, name: string) => {
-    const newList: SongList = { id: Date.now().toString(), name, songs: [] };
-    updateLocalProject(projectId, (p) => ({ ...p, songLists: [...p.songLists, newList] }));
+  const createSongList = async (projectId: string, name: string) => {
+    try {
+        const response = await api.post(`/bands/${projectId}/songlists`, { name });
+        const list = response.data;
+        const newList: SongList = { id: String(list.id), name: list.name, songs: [] };
+        updateLocalProject(projectId, (p) => ({ ...p, songLists: [...p.songLists, newList] }));
+    } catch (error) {
+        console.error("Error creating song list", error);
+    }
   };
 
-  const updateSongList = (projectId: string, listId: string, name: string) => {
-    updateLocalProject(projectId, (p) => ({
-      ...p,
-      songLists: p.songLists.map(l => l.id === listId ? { ...l, name } : l)
-    }));
+  const updateSongList = async (projectId: string, listId: string, name: string) => {
+    try {
+        await api.put(`/songlists/${listId}`, { name });
+        updateLocalProject(projectId, (p) => ({
+          ...p,
+          songLists: p.songLists.map(l => l.id === listId ? { ...l, name } : l)
+        }));
+    } catch(error) { console.error("Error updating song list", error); }
   };
 
-  const deleteSongList = (projectId: string, listId: string) => {
-    updateLocalProject(projectId, (p) => ({
-      ...p,
-      songLists: p.songLists.filter(l => l.id !== listId)
-    }));
+  const deleteSongList = async (projectId: string, listId: string) => {
+    try {
+        await api.delete(`/songlists/${listId}`);
+        updateLocalProject(projectId, (p) => ({
+          ...p,
+          songLists: p.songLists.filter(l => l.id !== listId)
+        }));
+    } catch(error) { console.error("Error deleting song list", error); }
   };
 
-  const createSong = (projectId: string, listId: string, song: Omit<Song, 'id' | 'tablatures' | 'files'>) => {
-    const newSong: Song = { ...song, id: Date.now().toString(), tablatures: [], files: [] };
-    updateLocalProject(projectId, (p) => ({
-      ...p,
-      songLists: p.songLists.map(l => l.id === listId ? { ...l, songs: [...l.songs, newSong] } : l)
-    }));
+  const createSong = async (projectId: string, listId: string, song: Omit<Song, 'id' | 'tablatures' | 'files' | 'bandName'>) => {
+    try {
+        const payload = {
+            name: song.name,
+            bpm: song.bpm,
+            songKey: song.key,
+            originalBand: song.originalBand
+        };
+        const response = await api.post(`/songlists/${listId}/songs`, payload);
+        const s = response.data;
+        const newSong: Song = { 
+            id: String(s.id), 
+            name: s.name, 
+            bandName: '', // Backend doesn't return this in SongModel, and it's redundant here
+            originalBand: s.originalBand,
+            bpm: s.bpm, 
+            key: s.songKey, 
+            tablatures: [], 
+            files: [] 
+        };
+        updateLocalProject(projectId, (p) => ({
+          ...p,
+          songLists: p.songLists.map(l => l.id === listId ? { ...l, songs: [...l.songs, newSong] } : l)
+        }));
+    } catch (error) {
+        console.error("Error creating song", error);
+    }
   };
 
-  const updateSong = (projectId: string, listId: string, songId: string, data: Partial<Song>) => {
-    updateLocalProject(projectId, (p) => ({
-      ...p,
-      songLists: p.songLists.map(l => l.id === listId ? {
-        ...l,
-        songs: l.songs.map(s => s.id === songId ? { ...s, ...data } : s)
-      } : l)
-    }));
+  const updateSong = async (projectId: string, listId: string, songId: string, data: Partial<Song>) => {
+    try {
+        const payload: any = {};
+        if (data.name) payload.name = data.name;
+        if (data.bpm) payload.bpm = data.bpm;
+        if (data.key) payload.songKey = data.key;
+        if (data.originalBand) payload.originalBand = data.originalBand;
+        
+        await api.put(`/songs/${songId}`, payload);
+        
+        updateLocalProject(projectId, (p) => ({
+          ...p,
+          songLists: p.songLists.map(l => l.id === listId ? {
+            ...l,
+            songs: l.songs.map(s => s.id === songId ? { ...s, ...data } : s)
+          } : l)
+        }));
+    } catch (error) { console.error("Error updating song", error); }
   };
 
-  const deleteSong = (projectId: string, listId: string, songId: string) => {
-    updateLocalProject(projectId, (p) => ({
-      ...p,
-      songLists: p.songLists.map(l => l.id === listId ? {
-        ...l,
-        songs: l.songs.filter(s => s.id !== songId)
-      } : l)
-    }));
+  const deleteSong = async (projectId: string, listId: string, songId: string) => {
+    try {
+        await api.delete(`/songs/${songId}`);
+        updateLocalProject(projectId, (p) => ({
+          ...p,
+          songLists: p.songLists.map(l => l.id === listId ? {
+            ...l,
+            songs: l.songs.filter(s => s.id !== songId)
+          } : l)
+        }));
+    } catch (error) { console.error("Error deleting song", error); }
   };
   
   const addSongFile = (projectId: string, listId: string, songId: string, file: Omit<MediaFile, 'id'>) => {
     // Mock implementation
   };
   
-  const createTablature = (projectId: string, listId: string, songId: string, tablature: Omit<Tablature, 'id' | 'files'>) => {
-     // Mock implementation
+  const createTablature = async (projectId: string, listId: string, songId: string, tablature: Omit<Tablature, 'id' | 'files'>) => {
+    try {
+        const response = await api.post(`/songs/${songId}/tabs`, tablature);
+        const t = response.data;
+        const newTab: Tablature = {
+             id: String(t.id),
+             name: t.name,
+             instrument: t.instrument,
+             instrumentIcon: t.instrumentIcon,
+             tuning: t.tuning,
+             content: t.content,
+             files: []
+        };
+        // Update local state is tricky purely for deep nesting, but simpler if we just fetch fresh project data or update deeply
+        // For now, deep update:
+         updateLocalProject(projectId, (p) => ({
+          ...p,
+          songLists: p.songLists.map(l => l.id === listId ? {
+            ...l,
+            songs: l.songs.map(s => s.id === songId ? { 
+                ...s, 
+                tablatures: [...s.tablatures, newTab]
+            } : s)
+          } : l)
+        }));
+    } catch (error) { console.error("Error creating tablature", error); }
   };
   
-  const updateTablature = (projectId: string, listId: string, songId: string, tabId: string, data: Partial<Tablature>) => {
-      // Mock implementation
+  const updateTablature = async (projectId: string, listId: string, songId: string, tabId: string, data: Partial<Tablature>) => {
+      try {
+          await api.put(`/tabs/${tabId}`, data);
+           updateLocalProject(projectId, (p) => ({
+            ...p,
+            songLists: p.songLists.map(l => l.id === listId ? {
+                ...l,
+                songs: l.songs.map(s => s.id === songId ? { 
+                    ...s, 
+                    tablatures: s.tablatures.map(t => t.id === tabId ? { ...t, ...data } : t)
+                } : s)
+            } : l)
+            }));
+      } catch (error) { console.error("Error updating tablature", error); }
   };
   
-  const deleteTablature = (projectId: string, listId: string, songId: string, tabId: string) => {
-      // Mock implementation
+  const deleteTablature = async (projectId: string, listId: string, songId: string, tabId: string) => {
+      try {
+          await api.delete(`/tabs/${tabId}`);
+           updateLocalProject(projectId, (p) => ({
+            ...p,
+            songLists: p.songLists.map(l => l.id === listId ? {
+                ...l,
+                songs: l.songs.map(s => s.id === songId ? { 
+                    ...s, 
+                    tablatures: s.tablatures.filter(t => t.id !== tabId)
+                } : s)
+            } : l)
+            }));
+      } catch (error) { console.error("Error deleting tablature", error); }
   };
   
   const addTablatureFile = (projectId: string, listId: string, songId: string, tabId: string, file: Omit<MediaFile, 'id'>) => {

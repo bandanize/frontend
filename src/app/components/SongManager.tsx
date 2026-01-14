@@ -16,12 +16,12 @@ export function SongManager() {
   const [openSongDialog, setOpenSongDialog] = useState(false);
   const [openEditListDialog, setOpenEditListDialog] = useState(false);
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
-  const [selectedSong, setSelectedSong] = useState<{ listId: string; song: Song } | null>(null);
+  const [selectedSongRef, setSelectedSongRef] = useState<{ listId: string; songId: string } | null>(null);
   const [listName, setListName] = useState('');
   const [editListData, setEditListData] = useState({ id: '', name: '' });
   const [songData, setSongData] = useState({
     name: '',
-    bandName: '',
+    originalBand: '',
     bpm: 120,
     key: 'C',
   });
@@ -57,24 +57,30 @@ export function SongManager() {
   const handleCreateSong = () => {
     if (!currentProject || !selectedListId || !songData.name.trim()) return;
     createSong(currentProject.id, selectedListId, songData);
-    setSongData({ name: '', bandName: '', bpm: 120, key: 'C' });
+    setSongData({ name: '', originalBand: '', bpm: 120, key: 'C' });
     setOpenSongDialog(false);
     setSelectedListId(null);
     toast.success('Canción creada');
   };
 
   const handleSelectSong = (listId: string, song: Song) => {
-    setSelectedSong({ listId, song });
+    setSelectedSongRef({ listId, songId: song.id });
   };
 
   if (!currentProject) return null;
 
-  if (selectedSong) {
+  const activeSong = selectedSongRef
+    ? currentProject.songLists
+        .find((l) => l.id === selectedSongRef.listId)
+        ?.songs.find((s) => s.id === selectedSongRef.songId)
+    : null;
+
+  if (activeSong && selectedSongRef) {
     return (
       <SongDetail
-        listId={selectedSong.listId}
-        song={selectedSong.song}
-        onBack={() => setSelectedSong(null)}
+        listId={selectedSongRef.listId}
+        song={activeSong}
+        onBack={() => setSelectedSongRef(null)}
       />
     );
   }
@@ -132,34 +138,33 @@ export function SongManager() {
                     <div className="flex items-center justify-between w-full pr-4">
                       <span className="font-medium">{list.name}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">
-                          {list.songs.length} {list.songs.length === 1 ? 'canción' : 'canciones'}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteList(list.id);
-                          }}
-                        >
-                          <Trash2 className="size-4 text-red-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditList(list.id, list.name);
-                          }}
-                        >
-                          <Edit className="size-4 text-gray-500" />
-                        </Button>
-                      </div>
+                      <span className="text-sm text-gray-500">
+                        {list.songs.length} {list.songs.length === 1 ? 'canción' : 'canciones'}
+                      </span>
                     </div>
-                  </AccordionTrigger>
+                  </div>
+                </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-2 pt-2">
+                      <div className="flex justify-end gap-2 mb-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditList(list.id, list.name)}
+                        >
+                          <Edit className="size-4 mr-2" />
+                          Renombrar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteList(list.id)}
+                        >
+                          <Trash2 className="size-4 mr-2" />
+                          Eliminar
+                        </Button>
+                      </div>
                       <Button
                         variant="outline"
                         size="sm"
@@ -224,12 +229,12 @@ export function SongManager() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="band-name">Nombre de la banda</Label>
+              <Label htmlFor="band-name">Banda Original (Artista)</Label>
               <Input
                 id="band-name"
                 placeholder="Ej: Oasis"
-                value={songData.bandName}
-                onChange={(e) => setSongData({ ...songData, bandName: e.target.value })}
+                value={songData.originalBand}
+                onChange={(e) => setSongData({ ...songData, originalBand: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
