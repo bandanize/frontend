@@ -83,10 +83,16 @@ export function ProjectChat() {
                       msg.userId === user?.id ? 'text-blue-100' : 'text-gray-500'
                     }`}
                   >
-                    {formatDistanceToNow(new Date(msg.timestamp), {
-                      addSuffix: true,
-                      locale: es,
-                    })}
+                    {(() => {
+                      try {
+                        const date = new Date(msg.timestamp);
+                        return isNaN(date.getTime()) 
+                          ? 'Hace un momento' 
+                          : formatDistanceToNow(date, { addSuffix: true, locale: es });
+                      } catch (e) {
+                        return 'Hace un momento';
+                      }
+                    })()}
                   </p>
                 </div>
               </div>

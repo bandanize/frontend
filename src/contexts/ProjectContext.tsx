@@ -143,11 +143,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         })) : [],
         chat: band.chatMessages ? band.chatMessages.map((msg: any) => ({
           id: String(msg.id),
-          userId: String(msg.sender.id),
-          userName: msg.sender.name,
-          message: msg.message,
-          timestamp: new Date(msg.timestamp),
-          mentions: [] // Mentions filtering logic can be added if needed, or derived
+          userId: msg.sender ? String(msg.sender.id) : 'unknown',
+          userName: msg.sender ? msg.sender.name : 'Unknown User',
+          message: msg.message || '',
+          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+          mentions: [] 
         })) : [],
         createdAt: new Date(),
       }));
@@ -239,10 +239,10 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         const msg = response.data;
         const newMessage: ChatMessage = {
           id: String(msg.id),
-          userId: String(msg.sender.id),
-          userName: msg.sender.name,
-          message: msg.message,
-          timestamp: new Date(msg.timestamp),
+          userId: msg.sender ? String(msg.sender.id) : 'unknown',
+          userName: msg.sender ? msg.sender.name : 'Unknown User',
+          message: msg.message || '',
+          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
           mentions: [],
         };
         updateLocalProject(projectId, (p) => ({ ...p, chat: [...p.chat, newMessage] }));
