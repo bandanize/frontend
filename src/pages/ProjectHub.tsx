@@ -27,11 +27,27 @@ export function ProjectHub() {
     imageUrl: currentProject?.imageUrl || '',
   });
 
-  const handleUpdateProject = () => {
+  // Sync edit data when dialog opens
+  React.useEffect(() => {
+    if (editDialogOpen && currentProject) {
+      setEditData({
+        name: currentProject.name,
+        description: currentProject.description,
+        imageUrl: currentProject.imageUrl || '',
+      });
+    }
+  }, [editDialogOpen, currentProject]);
+
+  const handleUpdateProject = async () => {
     if (!currentProject) return;
-    updateProject(currentProject.id, editData);
-    setEditDialogOpen(false);
-    toast.success('Proyecto actualizado');
+    try {
+      await updateProject(currentProject.id, editData);
+      setEditDialogOpen(false);
+      toast.success('Proyecto actualizado');
+    } catch (error) {
+      console.error('Error updating project:', error);
+      toast.error('Error al actualizar el proyecto');
+    }
   };
 
   if (!currentProject || currentProject.id !== projectId) {
@@ -61,11 +77,7 @@ export function ProjectHub() {
             </div>
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" onClick={() => setEditData({
-                  name: currentProject.name,
-                  description: currentProject.description,
-                  imageUrl: currentProject.imageUrl || '',
-                })}>
+                <Button variant="outline">
                   <Settings className="size-4 mr-2" />
                   Editar proyecto
                 </Button>
