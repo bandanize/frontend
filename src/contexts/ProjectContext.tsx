@@ -224,9 +224,23 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setCurrentProject(project || null);
   };
 
-  // --- The following functions are LOCAL ONLY/MOCK as backend doesn't support them yet ---
-  const addMember = (projectId: string, email: string) => {
-    console.warn("addMember: Backend does not support adding members by email yet via this context.");
+  const addMember = async (projectId: string, email: string) => {
+    try {
+        const response = await api.post(`/bands/${projectId}/members`, { email });
+        const updatedBand = response.data;
+        
+        updateLocalProject(projectId, (p) => ({
+            ...p,
+            members: updatedBand.members.map((m: any) => ({
+                id: String(m.id),
+                name: m.name,
+                email: m.email
+            }))
+        }));
+    } catch (error) {
+        console.error("Error adding member", error);
+        throw error;
+    }
   };
 
   const sendMessage = async (projectId: string, message: string) => {
