@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useProjects, Song, Tablature } from '@/contexts/ProjectContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -168,7 +168,7 @@ interface SongDetailProps {
 export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   const { currentProject, updateSong, deleteSong, addSongFile, createTablature, updateTablature, deleteTablature, addTablatureFile } = useProjects();
   const [openTabDialog, setOpenTabDialog] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<Tablature | null>(null);
+  const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
   const [tabData, setTabData] = useState({
     instrument: 'guitar',
     name: '',
@@ -183,7 +183,61 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     key: song.key || '',
   });
 
+  // Local state for active tablature editing
+  const [editingContent, setEditingContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Derive selectedTab from props to ensure it's always up to date
+  const selectedTab = song.tablatures.find(t => t.id === selectedTabId) || null;
+
+  // Sync local content when switching tabs
+  useEffect(() => {
+    if (selectedTab) {
+      setEditingContent(selectedTab.content || '');
+    }
+  }, [selectedTabId]); 
+
+  // Debounced Auto-save
+  useEffect(() => {
+    if (!selectedTabId || !currentProject) return;
+    
+    // Skip if content matches what we already have (prevents initial load trigger)
+    if (selectedTab?.content === editingContent) return;
+
+    setIsSaving(true);
+    const timer = setTimeout(() => {
+      updateTablature(currentProject.id, listId, song.id, selectedTabId, { content: editingContent })
+        .then(() => setIsSaving(false))
+        .catch(() => setIsSaving(false));
+    }, 1000); // Wait 1s after last keystroke
+
+    return () => clearTimeout(timer);
+  }, [editingContent, selectedTabId]);
+
+  const handleInsertText = (text: string) => {
+    if (!textareaRef.current) return;
+    
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentContent = editingContent;
+    
+    // Insert text at cursor position
+    const newContent = 
+      currentContent.substring(0, start) + 
+      text + 
+      currentContent.substring(end);
+    
+    setEditingContent(newContent);
+    
+    // Set cursor position after inserted text
+    setTimeout(() => {
+      textarea.focus();
+      const newPosition = start + text.length;
+      textarea.setSelectionRange(newPosition, newPosition);
+    }, 0);
+  };
 
   const handleSaveSong = () => {
     if (!currentProject) return;
@@ -216,8 +270,8 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   const handleDeleteTablature = (tabId: string) => {
     if (!currentProject) return;
     deleteTablature(currentProject.id, listId, song.id, tabId);
-    if (selectedTab?.id === tabId) {
-      setSelectedTab(null);
+    if (selectedTabId === tabId) {
+      setSelectedTabId(null);
     }
     toast.success('Tablatura eliminada');
   };
@@ -227,29 +281,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     updateTablature(currentProject.id, listId, song.id, tabId, { content });
   };
 
-  const handleInsertText = (text: string) => {
-    if (!textareaRef.current || !selectedTab) return;
-    
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentContent = selectedTab.content;
-    
-    // Insert text at cursor position
-    const newContent = 
-      currentContent.substring(0, start) + 
-      text + 
-      currentContent.substring(end);
-    
-    handleUpdateTabContent(selectedTab.id, newContent);
-    
-    // Set cursor position after inserted text
-    setTimeout(() => {
-      textarea.focus();
-      const newPosition = start + text.length;
-      textarea.setSelectionRange(newPosition, newPosition);
-    }, 0);
-  };
+
 
   const handleFileUpload = (type: 'song' | 'tab', tabId?: string) => {
     // Simulated file upload
@@ -462,9 +494,9 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                   <Card
                     key={tab.id}
                     className={`cursor-pointer transition-all ${
-                      selectedTab?.id === tab.id ? 'ring-2 ring-blue-600' : ''
+                      selectedTabId === tab.id ? 'ring-2 ring-blue-600' : ''
                     }`}
-                    onClick={() => setSelectedTab(tab)}
+                    onClick={() => setSelectedTabId(tab.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -512,6 +544,20 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      <div className="flex justify-end mb-2 items-center h-8">
+                        {isSaving ? (
+                            <span className="text-xs text-blue-600 animate-pulse flex items-center">
+                                <span className="size-2 bg-blue-600 rounded-full mr-2"></span>
+                                Guardando...
+                            </span>
+                        ) : (
+                            <span className="text-xs text-gray-400 flex items-center">
+                                <span className="size-2 bg-green-500 rounded-full mr-2"></span>
+                                Guardado
+                            </span>
+                        )}
+                      </div>
+
                       {/* Tablature Toolbar */}
                       <TablatureToolbar onInsert={handleInsertText} />
                       
@@ -519,8 +565,8 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                         <Label>Tablatura (estilo Ultimate Guitar)</Label>
                         <Textarea
                           ref={textareaRef}
-                          value={selectedTab.content || ''}
-                          onChange={(e) => handleUpdateTabContent(selectedTab.id, e.target.value)}
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
                           placeholder="Escribe tu tablatura aquí..."
                           className="font-mono text-sm min-h-[300px]"
                         />
