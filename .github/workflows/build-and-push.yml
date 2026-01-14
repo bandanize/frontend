@@ -1,17 +1,15 @@
-name: Frontend CI/CD
+name: Build and push
 
 on:
   push:
     branches:
       - main
-      - develop
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend.yml'
+    tags:
+      - '*'
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/frontend
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
@@ -29,19 +27,16 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
+        run: npm ci
 
       - name: Build Frontend
-        run: |
-          cd frontend
-          npm run build
+        run: npm run build
 
       - name: Log in to the Container registry
+        if: startsWith(github.ref, 'refs/tags/')
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -52,15 +47,16 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            type=ref,event=tag
             type=sha,format=long
 
-      - name: Build and push Frontend Docker image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
-          push: true
+          context: .
+          push: ${{ startsWith(github.ref, 'refs/tags/') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
