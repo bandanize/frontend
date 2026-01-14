@@ -11,7 +11,7 @@ interface WelcomeModalProps {
 export function WelcomeModal({ open, onClose }: WelcomeModalProps) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <Music2 className="size-8 text-purple-600" />

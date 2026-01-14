@@ -111,7 +111,7 @@ export function Dashboard() {
                 Nuevo Proyecto
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] rounded-lg">
               <DialogHeader>
                 <DialogTitle>Crear nuevo proyecto</DialogTitle>
                 <DialogDescription>
