@@ -22,6 +22,55 @@ export function ProjectChat() {
     scrollToBottom();
   }, [currentProject?.chat]);
 
+  // Mention logic
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const mentionFilteredMembers = currentProject?.members.filter(member => 
+    member.name.toLowerCase().includes(mentionQuery.toLowerCase()) && member.id !== user?.id
+  ) || [];
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+
+    // Simple mention detection: if last word starts with @
+    const lastWord = value.split(' ').pop();
+    if (lastWord && lastWord.startsWith('@')) {
+        setShowMentions(true);
+        setMentionQuery(lastWord.slice(1));
+    } else {
+        setShowMentions(false);
+    }
+  };
+
+  const handleSelectMention = (name: string) => {
+      const words = message.split(' ');
+      words.pop(); // Remove partial mention
+      const newMessage = [...words, `@${name} `].join(' ');
+      setMessage(newMessage);
+      setShowMentions(false);
+      inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showMentions && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault(); 
+        // Could implement navigation here
+    }
+    if (showMentions && e.key === 'Enter') {
+        e.preventDefault();
+        if (mentionFilteredMembers.length > 0) {
+            handleSelectMention(mentionFilteredMembers[0].name);
+        }
+    }
+    // Allow Escape to close mentions
+    if (showMentions && e.key === 'Escape') {
+      setShowMentions(false);
+    }
+  };
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && currentProject) {
@@ -66,14 +115,14 @@ export function ProjectChat() {
                 className={`flex ${msg.userId === user?.id ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                  className={`max-w-[70%] rounded-lg px-4 py-2 shadow-sm ${
                     msg.userId === user?.id
                       ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-900'
+                      : 'bg-white border border-gray-200 text-gray-900'
                   }`}
                 >
                   {msg.userId !== user?.id && (
-                    <p className="text-xs font-medium mb-1 opacity-70">
+                    <p className="text-xs font-bold mb-1 text-gray-600">
                       {msg.userName}
                     </p>
                   )}
@@ -101,20 +150,40 @@ export function ProjectChat() {
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Escribe un mensaje... (usa @ para mencionar)"
-            className="flex-1"
-          />
-          <Button type="submit" disabled={!message.trim()}>
-            <Send className="size-4" />
-          </Button>
-        </form>
-
-        <div className="mt-2 text-xs text-gray-500">
-          <p>Tip: Menciona a alguien escribiendo @nombre</p>
+        <div className="relative">
+             {showMentions && (
+                <div className="absolute bottom-full mb-2 left-0 w-64 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden z-10">
+                  {mentionFilteredMembers.length > 0 ? (
+                    mentionFilteredMembers.map(member => (
+                      <button
+                        key={member.id}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                        onClick={() => handleSelectMention(member.name)}
+                      >
+                         <div className="size-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-bold text-purple-600">
+                            {member.name.charAt(0)}
+                         </div>
+                         {member.name}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-gray-500">No se encontraron miembros</div>
+                  )}
+                </div>
+             )}
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <Input
+                value={message}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Escribe un mensaje... (usa @ para mencionar)"
+                className="flex-1"
+                ref={inputRef}
+              />
+              <Button type="submit" disabled={!message.trim()}>
+                <Send className="size-4" />
+              </Button>
+            </form>
         </div>
       </CardContent>
     </Card>
