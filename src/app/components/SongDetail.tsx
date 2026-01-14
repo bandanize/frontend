@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useProjects, Song, Tablature } from '@/contexts/ProjectContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -168,13 +168,104 @@ interface SongDetailProps {
 export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   const { currentProject, updateSong, deleteSong, addSongFile, createTablature, updateTablature, deleteTablature, addTablatureFile } = useProjects();
   const [openTabDialog, setOpenTabDialog] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<Tablature | null>(null);
+  const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
   const [tabData, setTabData] = useState({
     instrument: 'guitar',
     name: '',
     tuning: 'Standard (EADGBE)',
   });
+  
+  // Local state for song editing
+  const [editSongData, setEditSongData] = useState({
+    name: song.name || '',
+    originalBand: song.originalBand || '',
+    bpm: song.bpm || 0,
+    key: song.key || '',
+  });
+
+  // Local state for active tablature editing
+  const [editingContent, setEditingContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingSong, setIsSavingSong] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Derive selectedTab from props to ensure it's always up to date
+  const selectedTab = song.tablatures.find(t => t.id === selectedTabId) || null;
+
+  // Sync local content when switching tabs
+  useEffect(() => {
+    if (selectedTab) {
+      setEditingContent(selectedTab.content || '');
+    }
+  }, [selectedTabId]); 
+
+  // Debounced Auto-save for Tablature
+  useEffect(() => {
+    if (!selectedTabId || !currentProject) return;
+    
+    if (selectedTab?.content === editingContent) return;
+
+    setIsSaving(true);
+    const timer = setTimeout(() => {
+      updateTablature(currentProject.id, listId, song.id, selectedTabId, { content: editingContent })
+        .then(() => setIsSaving(false))
+        .catch(() => setIsSaving(false));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [editingContent, selectedTabId]);
+
+  // Debounced Auto-save for Song
+  useEffect(() => {
+    if (!currentProject) return;
+
+    // Skip if nothing changed from initial props (rough check)
+    // Note: This simple check might skip valid updates if only 1 field changed back to initial.
+    // A better approach is to rely on user interaction or memoize previous state, 
+    // but for now we assume any change in editSongData that differs from props triggers save.
+    const hasChanges = 
+        editSongData.name !== (song.name || '') ||
+        editSongData.originalBand !== (song.originalBand || '') ||
+        editSongData.bpm !== (song.bpm || 0) ||
+        editSongData.key !== (song.key || '');
+
+    if (!hasChanges) return;
+
+    setIsSavingSong(true);
+    const timer = setTimeout(() => {
+      updateSong(currentProject.id, listId, song.id, editSongData)
+        .then(() => setIsSavingSong(false))
+        .catch(() => setIsSavingSong(false));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [editSongData]);
+
+  const handleInsertText = (text: string) => {
+    if (!textareaRef.current) return;
+    
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentContent = editingContent;
+    
+    // Insert text at cursor position
+    const newContent = 
+      currentContent.substring(0, start) + 
+      text + 
+      currentContent.substring(end);
+    
+    setEditingContent(newContent);
+    
+    // Set cursor position after inserted text
+    setTimeout(() => {
+      textarea.focus();
+      const newPosition = start + text.length;
+      textarea.setSelectionRange(newPosition, newPosition);
+    }, 0);
+  };
+
+  // Removed manual handleSaveSong
 
   const handleCreateTablature = () => {
     if (!currentProject || !tabData.name.trim()) return;
@@ -201,8 +292,8 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   const handleDeleteTablature = (tabId: string) => {
     if (!currentProject) return;
     deleteTablature(currentProject.id, listId, song.id, tabId);
-    if (selectedTab?.id === tabId) {
-      setSelectedTab(null);
+    if (selectedTabId === tabId) {
+      setSelectedTabId(null);
     }
     toast.success('Tablatura eliminada');
   };
@@ -210,30 +301,6 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   const handleUpdateTabContent = (tabId: string, content: string) => {
     if (!currentProject) return;
     updateTablature(currentProject.id, listId, song.id, tabId, { content });
-  };
-
-  const handleInsertText = (text: string) => {
-    if (!textareaRef.current || !selectedTab) return;
-    
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentContent = selectedTab.content;
-    
-    // Insert text at cursor position
-    const newContent = 
-      currentContent.substring(0, start) + 
-      text + 
-      currentContent.substring(end);
-    
-    handleUpdateTabContent(selectedTab.id, newContent);
-    
-    // Set cursor position after inserted text
-    setTimeout(() => {
-      textarea.focus();
-      const newPosition = start + text.length;
-      textarea.setSelectionRange(newPosition, newPosition);
-    }, 0);
   };
 
   const handleFileUpload = (type: 'song' | 'tab', tabId?: string) => {
@@ -261,6 +328,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     return <Icon className="size-4" />;
   };
 
+  // Update return JSX
   return (
     <div className="space-y-6">
       <Card>
@@ -273,14 +341,27 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
               <div>
                 <CardTitle className="text-2xl">{song.name}</CardTitle>
                 <p className="text-gray-600 mt-1">
-                  {song.bandName} • {song.bpm} BPM • {song.key}
+                  {song.originalBand || song.bandName} • {song.bpm} BPM • {song.key}
                 </p>
               </div>
             </div>
-            <Button variant="destructive" onClick={handleDeleteSong}>
-              <Trash2 className="size-4 mr-2" />
-              Eliminar canción
-            </Button>
+            <div className="flex gap-2 items-center">
+                {isSavingSong ? (
+                    <span className="text-xs text-blue-600 animate-pulse flex items-center mr-2">
+                        <span className="size-2 bg-blue-600 rounded-full mr-2"></span>
+                        Guardando...
+                    </span>
+                ) : (
+                    <span className="text-xs text-gray-400 flex items-center mr-2">
+                        <span className="size-2 bg-green-500 rounded-full mr-2"></span>
+                        Guardado
+                    </span>
+                )}
+                <Button variant="destructive" onClick={handleDeleteSong}>
+                <Trash2 className="size-4 mr-2" />
+                Eliminar canción
+                </Button>
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -295,35 +376,37 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
             <div className="space-y-2">
               <Label>Nombre</Label>
               <Input
-                value={song.name}
-                onChange={(e) => currentProject && updateSong(currentProject.id, listId, song.id, { name: e.target.value })}
+                value={editSongData.name}
+                onChange={(e) => setEditSongData({ ...editSongData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>Banda</Label>
               <Input
-                value={song.bandName}
-                onChange={(e) => currentProject && updateSong(currentProject.id, listId, song.id, { bandName: e.target.value })}
+                value={editSongData.originalBand}
+                placeholder="Ej: The Beatles"
+                onChange={(e) => setEditSongData({ ...editSongData, originalBand: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>BPM</Label>
               <Input
                 type="number"
-                value={song.bpm}
-                onChange={(e) => currentProject && updateSong(currentProject.id, listId, song.id, { bpm: parseInt(e.target.value) || 120 })}
+                value={editSongData.bpm}
+                onChange={(e) => setEditSongData({ ...editSongData, bpm: parseInt(e.target.value) || 0 })}
               />
             </div>
             <div className="space-y-2">
               <Label>Tonalidad</Label>
               <Input
-                value={song.key}
-                onChange={(e) => currentProject && updateSong(currentProject.id, listId, song.id, { key: e.target.value })}
+                value={editSongData.key}
+                onChange={(e) => setEditSongData({ ...editSongData, key: e.target.value })}
               />
             </div>
           </div>
         </CardContent>
       </Card>
+      {/* ... rest of the component */}
 
       {/* Archivos y media */}
       <Card>
@@ -438,9 +521,9 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                   <Card
                     key={tab.id}
                     className={`cursor-pointer transition-all ${
-                      selectedTab?.id === tab.id ? 'ring-2 ring-blue-600' : ''
+                      selectedTabId === tab.id ? 'ring-2 ring-blue-600' : ''
                     }`}
-                    onClick={() => setSelectedTab(tab)}
+                    onClick={() => setSelectedTabId(tab.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -488,6 +571,20 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      <div className="flex justify-end mb-2 items-center h-8">
+                        {isSaving ? (
+                            <span className="text-xs text-blue-600 animate-pulse flex items-center">
+                                <span className="size-2 bg-blue-600 rounded-full mr-2"></span>
+                                Guardando...
+                            </span>
+                        ) : (
+                            <span className="text-xs text-gray-400 flex items-center">
+                                <span className="size-2 bg-green-500 rounded-full mr-2"></span>
+                                Guardado
+                            </span>
+                        )}
+                      </div>
+
                       {/* Tablature Toolbar */}
                       <TablatureToolbar onInsert={handleInsertText} />
                       
@@ -495,8 +592,8 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                         <Label>Tablatura (estilo Ultimate Guitar)</Label>
                         <Textarea
                           ref={textareaRef}
-                          value={selectedTab.content}
-                          onChange={(e) => handleUpdateTabContent(selectedTab.id, e.target.value)}
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
                           placeholder="Escribe tu tablatura aquí..."
                           className="font-mono text-sm min-h-[300px]"
                         />

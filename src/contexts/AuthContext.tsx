@@ -1,17 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '@/services/api';
 
 interface User {
-  id: string;
+  id: string; 
   email: string;
   name: string;
-  instrument?: string;
-  bio?: string;
+  username: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string, username: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
 }
@@ -22,67 +22,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    // Check for token and load user
+    const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
+    if (token && storedUser) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // Simulated login
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const foundUser = users.find((u: any) => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-    } else {
-      throw new Error('Credenciales incorrectas');
+  const login = async (username: string, password: string) => {
+    try {
+      const response = await api.post('/auth/login', { username, password });
+      const { token, id, email, name } = response.data;
+      
+      localStorage.setItem('token', token);
+      
+      const user: User = { 
+        id: String(id), // Ensure it's a string for frontend consistency
+        username: response.data.username || username,
+        email,
+        name
+      };
+      
+      setUser(user);
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      
+    } catch (error) {
+       console.error("Login error", error);
+       throw error;
     }
   };
 
-  const register = async (email: string, password: string, name: string) => {
-    // Simulated registration
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    
-    if (users.find((u: any) => u.email === email)) {
-      throw new Error('El email ya está registrado');
+  const register = async (email: string, password: string, name: string, username: string) => {
+    try {
+      // Register endpoint expects UserModel: { username, email, hashedPassword, name }
+      // We send 'hashedPassword' as 'password' ? No, `AuthController` register takes `UserModel`.
+      // `UserModel` has `hashedPassword`. Frontend usually sends `password` and backend encodes it.
+      // Let's check `AuthController.register`: `user.setHashedPassword(passwordEncoder.encode(user.getHashedPassword()));`
+      // So it expects the plain password in the `hashedPassword` field of the JSON.
+      
+      await api.post('/auth/register', { 
+        email, 
+        hashedPassword: password, 
+        name,
+        username 
+      });
+      
+      // After register, auto-login
+      await login(username, password);
+      
+    } catch (error) {
+      console.error("Register error", error);
+      throw error;
     }
-
-    const newUser = {
-      id: Date.now().toString(),
-      email,
-      password,
-      name,
-    };
-
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-
-    const { password: _, ...userWithoutPassword } = newUser;
-    setUser(userWithoutPassword);
-    localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
   };
 
   const updateProfile = (data: Partial<User>) => {
+    // Not implemented on backend fully yet for updating own profile via this context directly
     if (user) {
       const updatedUser = { ...user, ...data };
       setUser(updatedUser);
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      
-      // Update in users array
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const index = users.findIndex((u: any) => u.id === user.id);
-      if (index !== -1) {
-        users[index] = { ...users[index], ...data };
-        localStorage.setItem('users', JSON.stringify(users));
-      }
+       // TODO: Call backend update endpoint if available
     }
   };
 
