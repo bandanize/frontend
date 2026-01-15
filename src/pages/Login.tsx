@@ -41,11 +41,11 @@ export function Login() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Usuario</Label>
+              <Label htmlFor="username">Usuario o Email</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Nombre de usuario"
+                placeholder="Nombre de usuario o email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
