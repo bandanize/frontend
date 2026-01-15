@@ -387,7 +387,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
           if (endpoint === 'audio') folderName = 'audio';
           if (endpoint === 'video') folderName = 'videos';
           
-          mediaFile.url = `/uploads/${folderName}/${filename}`;
+          mediaFile.url = `/api/uploads/${folderName}/${filename}`;
 
           // 3. Link file to song or tab
           if (uploadTarget.type === 'song') {
@@ -545,8 +545,8 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                         </Button>
                       )}
                       
-                      <a 
-                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${file.url}`} 
+                        <a 
+                        href={`${(import.meta.env.VITE_API_URL || '') + (file.url.startsWith('/uploads') ? '/api' + file.url : file.url)}`} 
                         download 
                         target="_blank"
                         rel="noopener noreferrer"
@@ -806,7 +806,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
       </Card>
 
       <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
-        <DialogContent className="max-w-4xl w-full p-0 bg-black/95 border-none text-white">
+        <DialogContent className="max-w-4xl w-full p-0 bg-black/95 border-none text-white [&>button]:hidden">
             <DialogHeader className="p-4 absolute top-0 left-0 w-full z-10 bg-gradient-to-b from-black/50 to-transparent">
                 <div className="flex justify-between items-center">
                     <DialogTitle className="text-white drop-shadow-md">{previewFile?.name}</DialogTitle>
@@ -828,7 +828,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                     <>
                         {previewFile.type.startsWith('image') && (
                             <img 
-                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${previewFile.url}`} 
+                                src={`${(import.meta.env.VITE_API_URL || '') + (previewFile.url.startsWith('/uploads') ? '/api' + previewFile.url : previewFile.url)}`} 
                                 alt={previewFile.name} 
                                 className="max-w-full max-h-[80vh] object-contain"
                             />
@@ -839,7 +839,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                                 <audio 
                                     controls 
                                     className="w-full" 
-                                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${previewFile.url}`} 
+                                    src={`${(import.meta.env.VITE_API_URL || '') + (previewFile.url.startsWith('/uploads') ? '/api' + previewFile.url : previewFile.url)}`} 
                                     autoPlay
                                 />
                             </div>
@@ -848,7 +848,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                             <video 
                                 controls 
                                 className="max-w-full max-h-[80vh]" 
-                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${previewFile.url}`} 
+                                src={`${(import.meta.env.VITE_API_URL || '') + (previewFile.url.startsWith('/uploads') ? '/api' + previewFile.url : previewFile.url)}`} 
                                 autoPlay
                             />
                         )}
