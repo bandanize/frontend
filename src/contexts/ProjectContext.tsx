@@ -89,10 +89,12 @@ interface ProjectContextType {
   updateSong: (projectId: string, listId: string, songId: string, data: Partial<Song>) => void;
   deleteSong: (projectId: string, listId: string, songId: string) => void;
   addSongFile: (projectId: string, listId: string, songId: string, file: Omit<MediaFile, 'id'>) => void;
+  deleteSongFile: (projectId: string, listId: string, songId: string, fileUrl: string) => void;
   createTablature: (projectId: string, listId: string, songId: string, tablature: Omit<Tablature, 'id' | 'files'>) => void;
   updateTablature: (projectId: string, listId: string, songId: string, tabId: string, data: Partial<Tablature>) => void;
   deleteTablature: (projectId: string, listId: string, songId: string, tabId: string) => void;
   addTablatureFile: (projectId: string, listId: string, songId: string, tabId: string, file: Omit<MediaFile, 'id'>) => void;
+  deleteTablatureFile: (projectId: string, listId: string, songId: string, tabId: string, fileUrl: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
@@ -407,8 +409,31 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     } catch (error) { console.error("Error deleting song", error); }
   };
   
-  const addSongFile = (projectId: string, listId: string, songId: string, file: Omit<MediaFile, 'id'>) => {
-    // Mock implementation
+  const addSongFile = async (projectId: string, listId: string, songId: string, file: Omit<MediaFile, 'id'>) => {
+    // 1. We assume the file is already uploaded OR this function handles the whole process.
+    // The current signature receives Omit<MediaFile, 'id'> which implies metadata.
+    // BUT the component will have the actual File object.
+    
+    // Changing the logic: The component should handle the upload to /api/upload/* first, 
+    // then pass the metadata here. OR we change this signature.
+    // Let's keep the signature receiving metadata, assuming the component uploads first.
+    // Actually, looking at the component usage: handleFileUpload calls this with { name, type, url }.
+    // So the component MUST handle the upload.
+    try {
+        const response = await api.post(`/songs/${songId}/files`, file);
+        const updatedSong = response.data;
+        // Update local state
+         updateLocalProject(projectId, (p) => ({
+          ...p,
+          songLists: p.songLists.map(l => l.id === listId ? {
+            ...l,
+            songs: l.songs.map(s => s.id === songId ? { 
+                ...s, 
+                files: updatedSong.files || []
+            } : s)
+          } : l)
+        }));
+    } catch (error) { console.error("Error adding song file", error); }
   };
   
   const createTablature = async (projectId: string, listId: string, songId: string, tablature: Omit<Tablature, 'id' | 'files'>) => {
@@ -470,8 +495,67 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       } catch (error) { console.error("Error deleting tablature", error); }
   };
   
-  const addTablatureFile = (projectId: string, listId: string, songId: string, tabId: string, file: Omit<MediaFile, 'id'>) => {
-      // Mock implementation
+  const addTablatureFile = async (projectId: string, listId: string, songId: string, tabId: string, file: Omit<MediaFile, 'id'>) => {
+      try {
+        const response = await api.post(`/tabs/${tabId}/files`, file);
+        const updatedTab = response.data;
+        
+         updateLocalProject(projectId, (p) => ({
+            ...p,
+            songLists: p.songLists.map(l => l.id === listId ? {
+                ...l,
+                songs: l.songs.map(s => s.id === songId ? { 
+                    ...s, 
+                    tablatures: s.tablatures.map(t => t.id === tabId ? {
+                        ...t,
+                        files: updatedTab.files || []
+                    } : t)
+                } : s)
+            } : l)
+        }));
+    } catch (error) { console.error("Error adding tablature file", error); }
+  };
+
+  const deleteSongFile = async (projectId: string, listId: string, songId: string, fileUrl: string) => {
+
+      
+      // Let's retry properly
+      try {
+          const response = await api.delete(`/songs/${songId}/files`, { params: { url: fileUrl } });
+          const updatedSong = response.data; // Backend returns updated SongModel
+          
+           updateLocalProject(projectId, (p) => ({
+              ...p,
+              songLists: p.songLists.map(l => l.id === listId ? {
+                ...l,
+                songs: l.songs.map(s => s.id === songId ? { 
+                    ...s, 
+                    files: updatedSong.files || []
+                } : s)
+              } : l)
+            }));
+      } catch (error) { console.error("Error deleting song file", error); }
+  };
+
+  const deleteTablatureFile = async (projectId: string, listId: string, songId: string, tabId: string, fileUrl: string) => {
+      try {
+          const response = await api.delete(`/tabs/${tabId}/files`, { params: { url: fileUrl } });
+          const updatedTab = response.data;
+          
+           updateLocalProject(projectId, (p) => ({
+              ...p,
+              songLists: p.songLists.map(l => l.id === listId ? {
+                  ...l,
+                  songs: l.songs.map(s => s.id === songId ? { 
+                      ...s, 
+                      tablatures: s.tablatures.map(t => t.id === tabId ? {
+                          ...t,
+                          files: updatedTab.files || []
+                      } : t)
+                  } : s)
+              } : l)
+          }));
+      } catch (error) { console.error("Error deleting tablature file", error); }
   };
 
   // Helper to update local state
@@ -508,10 +592,12 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       updateSong,
       deleteSong,
       addSongFile,
+      deleteSongFile,
       createTablature,
       updateTablature,
       deleteTablature,
       addTablatureFile,
+      deleteTablatureFile,
     }}>
       {children}
     </ProjectContext.Provider>

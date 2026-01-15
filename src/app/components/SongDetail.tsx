@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useProjects, Song, Tablature } from '@/contexts/ProjectContext';
+import api from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -7,7 +8,7 @@ import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { ArrowLeft, Plus, Music2, FileAudio, Image as ImageIcon, File, Trash2, Guitar, Drum, Music, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Music2, FileAudio, Image as ImageIcon, File, Trash2, Guitar, Drum, Music, Check, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/app/components/ui/separator';
 
@@ -166,7 +167,18 @@ interface SongDetailProps {
 }
 
 export function SongDetail({ listId, song, onBack }: SongDetailProps) {
-  const { currentProject, updateSong, deleteSong, addSongFile, createTablature, updateTablature, deleteTablature, addTablatureFile } = useProjects();
+  const { 
+    currentProject, 
+    updateSong, 
+    deleteSong, 
+    addSongFile, 
+    deleteSongFile,
+    createTablature, 
+    updateTablature, 
+    deleteTablature, 
+    addTablatureFile,
+    deleteTablatureFile
+  } = useProjects();
   const [openTabDialog, setOpenTabDialog] = useState(false);
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
   const [tabData, setTabData] = useState({
@@ -315,23 +327,82 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     updateTablature(currentProject.id, listId, song.id, tabId, { content });
   };
 
+  // File Upload State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadTarget, setUploadTarget] = useState<{ type: 'song' | 'tab', tabId?: string } | null>(null);
+
   const handleFileUpload = (type: 'song' | 'tab', tabId?: string) => {
-    // Simulated file upload
-    const fileName = prompt('Nombre del archivo:');
-    if (!fileName || !currentProject) return;
-
-    const file = {
-      name: fileName,
-      type: 'audio/mp3',
-      url: 'https://example.com/file.mp3',
-    };
-
-    if (type === 'song') {
-      addSongFile(currentProject.id, listId, song.id, file);
-    } else if (tabId) {
-      addTablatureFile(currentProject.id, listId, song.id, tabId, file);
+    setUploadTarget({ type, tabId });
+    // Reset value to allow selecting same file again
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+        fileInputRef.current.click();
     }
-    toast.success('Archivo añadido');
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file || !uploadTarget || !currentProject) return;
+
+      const toastId = toast.loading('Subiendo archivo...');
+
+      try {
+          // Determine upload endpoint based on file type
+          let endpoint = 'file';
+          if (file.type.startsWith('image/')) endpoint = 'image';
+          else if (file.type.startsWith('audio/')) endpoint = 'audio';
+          else if (file.type.startsWith('video/')) endpoint = 'video';
+
+          const formData = new FormData();
+          formData.append('file', file);
+
+          // 1. Upload file
+          const uploadResponse = await api.post(`/upload/${endpoint}`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          const filename = uploadResponse.data; // Backend returns just the filename string
+
+          // 2. Construct MediaFile object
+          const mediaFile = {
+              name: file.name,
+              type: file.type,
+              url: `/uploads/${endpoint === 'file' ? 'files' : (endpoint + (endpoint.endsWith('s') ? '' : 's'))}/${filename}` 
+              // Note: Backend folders are plural: images, audio, videos, files. Endpoint is singular/plural mixed?
+              // Let's check LocalStorageService:
+              // rootLocation.resolve("images") ... "audio" ... "videos" ... "files"
+              // UploadController: "image" -> "images", "audio" -> "audio", "video" -> "videos", "file" -> "files".
+              // So: 
+              // image -> /uploads/images/filename
+              // audio -> /uploads/audio/filename (wait, LocalStorageService says "audio" (singular)?)
+              // video -> /uploads/videos/filename
+              // file -> /uploads/files/filename
+          };
+          
+          // Verify 'audio' folder name in LocalStorageService
+          // Line 39 in LocalStorageService: Files.createDirectories(rootLocation.resolve("audio")); -> Singular
+          
+          let folderName = 'files';
+          if (endpoint === 'image') folderName = 'images';
+          if (endpoint === 'audio') folderName = 'audio';
+          if (endpoint === 'video') folderName = 'videos';
+          
+          mediaFile.url = `/uploads/${folderName}/${filename}`;
+
+          // 3. Link file to song or tab
+          if (uploadTarget.type === 'song') {
+              await addSongFile(currentProject.id, listId, song.id, mediaFile);
+          } else if (uploadTarget.type === 'tab' && uploadTarget.tabId) {
+              await addTablatureFile(currentProject.id, listId, song.id, uploadTarget.tabId, mediaFile);
+          }
+          
+          toast.success('Archivo subido correctamente', { id: toastId });
+
+      } catch (error) {
+          console.error("Upload error", error);
+          toast.error('Error al subir el archivo', { id: toastId });
+      } finally {
+          setUploadTarget(null);
+      }
   };
 
   const getInstrumentIcon = (iconName: string) => {
@@ -343,6 +414,12 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   // Update return JSX
   return (
     <div className="space-y-6">
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        className="hidden" 
+      />
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
@@ -443,7 +520,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
           ) : (
             <div className="space-y-2">
               {song.files.map((file) => (
-                <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div key={file.url} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg group">
                   {file.type.startsWith('audio') ? (
                     <FileAudio className="size-5 text-blue-600" />
                   ) : file.type.startsWith('image') ? (
@@ -451,7 +528,30 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                   ) : (
                     <File className="size-5 text-gray-600" />
                   )}
-                  <span className="flex-1 text-sm">{file.name}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a 
+                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${file.url}`} 
+                        download 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 hover:bg-gray-200 rounded-md text-gray-600"
+                        title="Descargar"
+                      >
+                          <Download className="size-4" />
+                      </a>
+                      <Button
+                        variant="ghost" 
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => currentProject && deleteSongFile(currentProject.id, listId, song.id, file.url)}
+                        title="Eliminar"
+                      >
+                          <Trash2 className="size-4" />
+                      </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -628,7 +728,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                           <Label>Archivos adjuntos</Label>
                           <div className="space-y-2">
                             {selectedTab.files.map((file) => (
-                              <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                              <div key={file.url} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg group">
                                 {file.type.startsWith('audio') ? (
                                   <FileAudio className="size-5 text-blue-600" />
                                 ) : file.type.startsWith('image') ? (
@@ -636,7 +736,30 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                                 ) : (
                                   <File className="size-5 text-gray-600" />
                                 )}
-                                <span className="flex-1 text-sm">{file.name}</span>
+                                <div className="flex-1 min-w-0">
+                                   <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <a 
+                                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${file.url}`} 
+                                      download 
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-2 hover:bg-gray-200 rounded-md text-gray-600"
+                                      title="Descargar"
+                                    >
+                                        <Download className="size-4" />
+                                    </a>
+                                    <Button
+                                      variant="ghost" 
+                                      size="icon"
+                                      className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      onClick={() => currentProject && deleteTablatureFile(currentProject.id, listId, song.id, selectedTab.id, file.url)}
+                                      title="Eliminar"
+                                    >
+                                        <Trash2 className="size-4" />
+                                    </Button>
+                                </div>
                               </div>
                             ))}
                           </div>
