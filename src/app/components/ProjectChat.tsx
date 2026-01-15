@@ -176,7 +176,7 @@ export function ProjectChat() {
                 value={message}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Escribe un mensaje... (usa @ para mencionar)"
+                placeholder="Escribe un mensaje..."
                 className="flex-1"
                 ref={inputRef}
               />

@@ -6,29 +6,35 @@ import { Input } from '@/app/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Label } from '@/app/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
-import { Plus, Trash2, Music, ChevronRight, Edit } from 'lucide-react';
+import { Plus, Trash2, Music, ChevronRight, Edit, Check } from 'lucide-react';
 import { SongDetail } from '@/app/components/SongDetail';
 import { toast } from 'sonner';
 
-// Inline component for editing list metadata with auto-save
+// Inline component for editing list metadata with manual save
 const SongListEditor = ({ list, currentProject, onDelete }: { list: SongList, currentProject: Project, onDelete: (id: string) => void }) => {
   const { updateSongList } = useProjects();
   const [name, setName] = useState(list.name);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  // Debounced Auto-save
   useEffect(() => {
-    if (!currentProject || name === list.name) return;
+    setHasChanges(name !== list.name);
+  }, [name, list.name]);
+
+  const handleSave = async () => {
+    if (!currentProject || !name.trim()) return;
 
     setIsSaving(true);
-    const timer = setTimeout(() => {
-      updateSongList(currentProject.id, list.id, name)
-        .then(() => setIsSaving(false))
-        .catch(() => setIsSaving(false));
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [name]);
+    try {
+        await updateSongList(currentProject.id, list.id, name);
+        setHasChanges(false);
+        toast.success('Lista actualizada');
+    } catch (error) {
+        toast.error('Error al guardar');
+    } finally {
+        setIsSaving(false);
+    }
+  };
 
   return (
     <div className="flex items-center gap-2 mb-4 p-1">
@@ -41,17 +47,17 @@ const SongListEditor = ({ list, currentProject, onDelete }: { list: SongList, cu
             className="h-9"
           />
         </div>
-        <div className="flex items-center gap-2 min-w-[100px] justify-end">
-            {isSaving ? (
-                <span className="text-xs text-blue-600 animate-pulse whitespace-nowrap flex items-center">
-                    <span className="size-1.5 bg-blue-600 rounded-full mr-1.5"></span>
-                    Guardando
-                </span>
-            ) : (
-                <span className="text-xs text-gray-400 whitespace-nowrap flex items-center">
-                    <span className="size-1.5 bg-green-500 rounded-full mr-1.5"></span>
-                    Guardado
-                </span>
+        <div className="flex items-center gap-1 min-w-[80px] justify-end">
+            {hasChanges && (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 w-8 p-0"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                >
+                    <Check className="size-4" />
+                </Button>
             )}
             <Button
                 variant="ghost"

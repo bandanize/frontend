@@ -7,7 +7,7 @@ import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { ArrowLeft, Plus, Music2, FileAudio, Image as ImageIcon, File, Trash2, Guitar, Drum, Music } from 'lucide-react';
+import { ArrowLeft, Plus, Music2, FileAudio, Image as ImageIcon, File, Trash2, Guitar, Drum, Music, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/app/components/ui/separator';
 
@@ -199,47 +199,59 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     }
   }, [selectedTabId]); 
 
-  // Debounced Auto-save for Tablature
+  // Manual Save for Tablature
+  const [hasTabChanges, setHasTabChanges] = useState(false);
+
   useEffect(() => {
+    if (!selectedTab) return;
+    setHasTabChanges(editingContent !== (selectedTab.content || ''));
+  }, [editingContent, selectedTab]);
+
+  const handleSaveTab = async () => {
     if (!selectedTabId || !currentProject) return;
-    
-    if (selectedTab?.content === editingContent) return;
 
     setIsSaving(true);
-    const timer = setTimeout(() => {
-      updateTablature(currentProject.id, listId, song.id, selectedTabId, { content: editingContent })
-        .then(() => setIsSaving(false))
-        .catch(() => setIsSaving(false));
-    }, 1000);
+    try {
+      await updateTablature(currentProject.id, listId, song.id, selectedTabId, { content: editingContent });
+      setHasTabChanges(false);
+      toast.success('Tablatura actualizada');
+    } catch (error) {
+      toast.error('Error al guardar tablatura');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-    return () => clearTimeout(timer);
-  }, [editingContent, selectedTabId]);
+  // Debounced Auto-save for Tablature REMOVED
 
-  // Debounced Auto-save for Song
+
+
+  // Manual Save for Song
+  const [hasSongChanges, setHasSongChanges] = useState(false);
+
   useEffect(() => {
-    if (!currentProject) return;
-
-    // Skip if nothing changed from initial props (rough check)
-    // Note: This simple check might skip valid updates if only 1 field changed back to initial.
-    // A better approach is to rely on user interaction or memoize previous state, 
-    // but for now we assume any change in editSongData that differs from props triggers save.
     const hasChanges = 
         editSongData.name !== (song.name || '') ||
         editSongData.originalBand !== (song.originalBand || '') ||
         editSongData.bpm !== (song.bpm || 0) ||
         editSongData.key !== (song.key || '');
+    setHasSongChanges(hasChanges);
+  }, [editSongData, song]);
 
-    if (!hasChanges) return;
+  const handleSaveSong = async () => {
+    if (!currentProject) return;
 
     setIsSavingSong(true);
-    const timer = setTimeout(() => {
-      updateSong(currentProject.id, listId, song.id, editSongData)
-        .then(() => setIsSavingSong(false))
-        .catch(() => setIsSavingSong(false));
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [editSongData]);
+    try {
+      await updateSong(currentProject.id, listId, song.id, editSongData);
+      setHasSongChanges(false);
+      toast.success('Canción actualizada');
+    } catch (error) {
+      toast.error('Error al guardar canción');
+    } finally {
+      setIsSavingSong(false);
+    }
+  };
 
   const handleInsertText = (text: string) => {
     if (!textareaRef.current) return;
@@ -345,21 +357,25 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2 items-center">
-                {isSavingSong ? (
-                    <span className="text-xs text-blue-600 animate-pulse flex items-center mr-2">
-                        <span className="size-2 bg-blue-600 rounded-full mr-2"></span>
-                        Guardando...
-                    </span>
-                ) : (
-                    <span className="text-xs text-gray-400 flex items-center mr-2">
-                        <span className="size-2 bg-green-500 rounded-full mr-2"></span>
-                        Guardado
-                    </span>
+            <div className="flex gap-1 items-center">
+                {hasSongChanges && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 w-8 p-0"
+                        onClick={handleSaveSong}
+                        disabled={isSavingSong}
+                    >
+                        <Check className="size-4" />
+                    </Button>
                 )}
-                <Button variant="destructive" onClick={handleDeleteSong}>
-                <Trash2 className="size-4 mr-2" />
-                Eliminar canción
+                <Button 
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
+                    onClick={handleDeleteSong}
+                >
+                    <Trash2 className="size-4" />
                 </Button>
             </div>
           </div>
@@ -571,18 +587,26 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex justify-end mb-2 items-center h-8">
-                        {isSaving ? (
-                            <span className="text-xs text-blue-600 animate-pulse flex items-center">
-                                <span className="size-2 bg-blue-600 rounded-full mr-2"></span>
-                                Guardando...
-                            </span>
-                        ) : (
-                            <span className="text-xs text-gray-400 flex items-center">
-                                <span className="size-2 bg-green-500 rounded-full mr-2"></span>
-                                Guardado
-                            </span>
+                      <div className="flex justify-end mb-2 items-center h-8 gap-1">
+                        {hasTabChanges && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 w-8 p-0"
+                                onClick={handleSaveTab}
+                                disabled={isSaving}
+                            >
+                                <Check className="size-4" />
+                            </Button>
                         )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-400 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
+                            onClick={() => selectedTabId && handleDeleteTablature(selectedTabId)}
+                        >
+                            <Trash2 className="size-4" />
+                        </Button>
                       </div>
 
                       {/* Tablature Toolbar */}
