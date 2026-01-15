@@ -8,7 +8,7 @@ import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { ArrowLeft, Plus, Music2, FileAudio, Image as ImageIcon, File, Trash2, Guitar, Drum, Music, Check, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Music2, FileAudio, Image as ImageIcon, File, Trash2, Guitar, Drum, Music, Check, Download, Play, Eye, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/app/components/ui/separator';
 
@@ -199,6 +199,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   const [editingContent, setEditingContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingSong, setIsSavingSong] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{ url: string; type: string; name: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Derive selectedTab from props to ensure it's always up to date
@@ -532,6 +533,18 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                     <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {(file.type.startsWith('audio') || file.type.startsWith('video') || file.type.startsWith('image')) && (
+                        <Button
+                          variant="ghost" 
+                          size="icon"
+                          className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => setPreviewFile(file)}
+                          title="Reproducir/Ver"
+                        >
+                            {file.type.startsWith('image') ? <Eye className="size-4" /> : <Play className="size-4" />}
+                        </Button>
+                      )}
+                      
                       <a 
                         href={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${file.url}`} 
                         download 
@@ -740,6 +753,18 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                                    <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
                                 </div>
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {(file.type.startsWith('audio') || file.type.startsWith('video') || file.type.startsWith('image')) && (
+                                      <Button
+                                        variant="ghost" 
+                                        size="icon"
+                                        className="h-8 w-8 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                                        onClick={() => setPreviewFile(file)}
+                                        title="Reproducir/Ver"
+                                      >
+                                          {file.type.startsWith('image') ? <Eye className="size-4" /> : <Play className="size-4" />}
+                                      </Button>
+                                    )}
+
                                     <a 
                                       href={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${file.url}`} 
                                       download 
@@ -779,6 +804,59 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+        <DialogContent className="max-w-4xl w-full p-0 bg-black/95 border-none text-white">
+            <DialogHeader className="p-4 absolute top-0 left-0 w-full z-10 bg-gradient-to-b from-black/50 to-transparent">
+                <div className="flex justify-between items-center">
+                    <DialogTitle className="text-white drop-shadow-md">{previewFile?.name}</DialogTitle>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setPreviewFile(null)}
+                        className="text-white hover:bg-white/20 rounded-full"
+                    >
+                        <X className="size-6" />
+                    </Button>
+                </div>
+                <DialogDescription className="sr-only">
+                    Previsualización del archivo {previewFile?.name}
+                </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center justify-center min-h-[50vh] max-h-[85vh] overflow-hidden p-4">
+                {previewFile && (
+                    <>
+                        {previewFile.type.startsWith('image') && (
+                            <img 
+                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${previewFile.url}`} 
+                                alt={previewFile.name} 
+                                className="max-w-full max-h-[80vh] object-contain"
+                            />
+                        )}
+                        {previewFile.type.startsWith('audio') && (
+                            <div className="w-full max-w-md bg-white/10 p-6 rounded-xl backdrop-blur-sm">
+                                <FileAudio className="size-16 mx-auto mb-4 text-blue-400" />
+                                <audio 
+                                    controls 
+                                    className="w-full" 
+                                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${previewFile.url}`} 
+                                    autoPlay
+                                />
+                            </div>
+                        )}
+                        {previewFile.type.startsWith('video') && (
+                            <video 
+                                controls 
+                                className="max-w-full max-h-[80vh]" 
+                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${previewFile.url}`} 
+                                autoPlay
+                            />
+                        )}
+                    </>
+                )}
+            </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
