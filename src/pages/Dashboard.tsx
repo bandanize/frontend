@@ -159,7 +159,7 @@ export function Dashboard() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="project-image">URL de imagen (opcional)</Label>
+                  <Label htmlFor="project-image">Imagen</Label>
                    <div className="flex gap-2">
                       <Input
                         id="project-image"

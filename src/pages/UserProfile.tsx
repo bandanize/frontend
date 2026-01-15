@@ -125,7 +125,7 @@ export function UserProfile() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="instrument">Instrumento principal (opcional)</Label>
+                <Label htmlFor="instrument">Instrumento principal</Label>
                 <Input
                   id="instrument"
                   value={profileData.instrument}
@@ -135,7 +135,7 @@ export function UserProfile() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="bio">Biografía (opcional)</Label>
+                <Label htmlFor="bio">Biografía</Label>
                 <Textarea
                   id="bio"
                   value={profileData.bio}
