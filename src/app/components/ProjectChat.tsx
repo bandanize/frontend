@@ -79,13 +79,32 @@ export function ProjectChat() {
     }
   };
 
-  const highlightMentions = (text: string) => {
+  const highlightMentions = (text: string, isOwnMessage: boolean) => {
     if (!text) return null;
-    const parts = text.split(/(@\w+)/g);
+    
+    const memberNames = currentProject?.members
+      .map(m => m.name)
+      .sort((a, b) => b.length - a.length) || [];
+
+    if (memberNames.length === 0) return text;
+
+    const escapeRegex = (string: string) => {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+
+    // Match valid member names
+    const patternString = `(@(?:${memberNames.map(escapeRegex).join('|')}))`;
+    const regex = new RegExp(patternString, 'g');
+    
+    const parts = text.split(regex);
+    
     return parts.map((part, index) => {
-      if (part.startsWith('@')) {
+      if (part.startsWith('@') && memberNames.includes(part.slice(1))) {
         return (
-          <span key={index} className="text-blue-600 font-medium">
+          <span 
+            key={index} 
+            className={`font-bold ${isOwnMessage ? 'text-yellow-300' : 'text-blue-600'}`}
+          >
             {part}
           </span>
         );
@@ -126,7 +145,7 @@ export function ProjectChat() {
                       {msg.userName}
                     </p>
                   )}
-                  <p className="break-words">{highlightMentions(msg.message)}</p>
+                  <p className="break-words">{highlightMentions(msg.message, msg.userId === user?.id)}</p>
                   <p
                     className={`text-xs mt-1 ${
                       msg.userId === user?.id ? 'text-blue-100' : 'text-gray-500'
