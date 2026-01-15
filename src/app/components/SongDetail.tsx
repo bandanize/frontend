@@ -600,7 +600,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                       {(file.type.startsWith('audio') || file.type.startsWith('video') || file.type.startsWith('image')) && (
                         <Button
                           variant="ghost" 
