@@ -58,9 +58,9 @@ export function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <Music2 className="size-8 text-purple-600" />
+              <img src="/favicon.svg" alt="Bandanize" className="size-14" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Mis Proyectos Musicales</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Bandanize</h1>
                 <p className="text-sm text-gray-600">Bienvenido, {user?.name}</p>
               </div>
             </div>

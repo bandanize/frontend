@@ -32,7 +32,6 @@ export function InvitationsPage() {
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" onClick={() => navigate('/dashboard')}>
           <ArrowLeft className="size-4 mr-2" />
-          Volver
         </Button>
         <h1 className="text-2xl font-bold">Invitaciones de Proyecto</h1>
       </div>
