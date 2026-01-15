@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Plus, Music2, FileAudio, Image as ImageIcon, File, Trash2, Guitar, Drum, Music, Check, Download, Play, Eye, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/app/components/ui/separator';
+import { Progress } from '@/app/components/ui/progress';
 
 const INSTRUMENTS = [
   { value: 'guitar', label: 'Guitarra', icon: Guitar },
@@ -202,6 +203,14 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
   const [previewFile, setPreviewFile] = useState<{ url: string; type: string; name: string } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Upload State
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
+
+  // Helper for exponential backoff
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   // Derive selectedTab from props to ensure it's always up to date
   const selectedTab = song.tablatures.find(t => t.id === selectedTabId) || null;
 
@@ -235,11 +244,6 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     }
   };
 
-  // Debounced Auto-save for Tablature REMOVED
-
-
-
-  // Manual Save for Song
   const [hasSongChanges, setHasSongChanges] = useState(false);
 
   useEffect(() => {
@@ -290,8 +294,6 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     }, 0);
   };
 
-  // Removed manual handleSaveSong
-
   const handleCreateTablature = () => {
     if (!currentProject || !tabData.name.trim()) return;
     const instrument = INSTRUMENTS.find(i => i.value === tabData.instrument);
@@ -334,21 +336,45 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
 
   const handleFileUpload = (type: 'song' | 'tab', tabId?: string) => {
     setUploadTarget({ type, tabId });
-    // Reset value to allow selecting same file again
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
         fileInputRef.current.click();
     }
   };
 
+  const uploadFileWithRetry = async (url: string, formData: FormData, retries = 3, delay = 1000): Promise<any> => {
+      try {
+          return await api.post(url, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+              timeout: 1000 * 60 * 30, // 30 minutes timeout
+              onUploadProgress: (progressEvent) => {
+                  const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+                  setUploadProgress(percentCompleted);
+              }
+          });
+      } catch (error: any) {
+          if (retries > 0) {
+              if (error.response && error.response.status >= 400 && error.response.status < 500) {
+                  throw error; // Don't retry client errors (4xx)
+              }
+              setUploadStatus(`Reintentando... (Intentos restantes: ${retries})`);
+              await wait(delay);
+              return uploadFileWithRetry(url, formData, retries - 1, delay * 2);
+          }
+          throw error;
+      }
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file || !uploadTarget || !currentProject) return;
 
+      setIsUploading(true);
+      setUploadProgress(0);
+      setUploadStatus('Iniciando subida...');
       const toastId = toast.loading('Subiendo archivo...');
 
       try {
-          // Determine upload endpoint based on file type
           let endpoint = 'file';
           if (file.type.startsWith('image/')) endpoint = 'image';
           else if (file.type.startsWith('audio/')) endpoint = 'audio';
@@ -357,39 +383,20 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
           const formData = new FormData();
           formData.append('file', file);
 
-          // 1. Upload file
-          const uploadResponse = await api.post(`/upload/${endpoint}`, formData, {
-              headers: { 'Content-Type': 'multipart/form-data' }
-          });
-          const filename = uploadResponse.data; // Backend returns just the filename string
+          const uploadResponse = await uploadFileWithRetry(`/upload/${endpoint}`, formData);
+          const filename = uploadResponse.data;
 
-          // 2. Construct MediaFile object
-          const mediaFile = {
-              name: file.name,
-              type: file.type,
-              url: `/uploads/${endpoint === 'file' ? 'files' : (endpoint + (endpoint.endsWith('s') ? '' : 's'))}/${filename}` 
-              // Note: Backend folders are plural: images, audio, videos, files. Endpoint is singular/plural mixed?
-              // Let's check LocalStorageService:
-              // rootLocation.resolve("images") ... "audio" ... "videos" ... "files"
-              // UploadController: "image" -> "images", "audio" -> "audio", "video" -> "videos", "file" -> "files".
-              // So: 
-              // image -> /uploads/images/filename
-              // audio -> /uploads/audio/filename (wait, LocalStorageService says "audio" (singular)?)
-              // video -> /uploads/videos/filename
-              // file -> /uploads/files/filename
-          };
-          
-          // Verify 'audio' folder name in LocalStorageService
-          // Line 39 in LocalStorageService: Files.createDirectories(rootLocation.resolve("audio")); -> Singular
-          
           let folderName = 'files';
           if (endpoint === 'image') folderName = 'images';
           if (endpoint === 'audio') folderName = 'audio';
           if (endpoint === 'video') folderName = 'videos';
           
-          mediaFile.url = `/api/uploads/${folderName}/${filename}`;
+          const mediaFile = {
+              name: file.name,
+              type: file.type,
+              url: `/api/uploads/${folderName}/${filename}`
+          };
 
-          // 3. Link file to song or tab
           if (uploadTarget.type === 'song') {
               await addSongFile(currentProject.id, listId, song.id, mediaFile);
           } else if (uploadTarget.type === 'tab' && uploadTarget.tabId) {
@@ -398,11 +405,26 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
           
           toast.success('Archivo subido correctamente', { id: toastId });
 
-      } catch (error) {
+      } catch (error: any) {
           console.error("Upload error", error);
-          toast.error('Error al subir el archivo', { id: toastId });
+          let errorMessage = 'Error al subir el archivo';
+          
+          if (error.response) {
+              if (error.response.status === 413) {
+                  errorMessage = 'Archivo demasiado grande (Límite excedido)';
+              } else if (error.response.status === 524) {
+                  errorMessage = 'Timeout (Cloudflare). Prueba un archivo más pequeño.';
+              }
+          } else if (error.code === 'ECONNABORTED') {
+               errorMessage = 'La subida tardó demasiado.';
+          }
+
+          toast.error(errorMessage, { id: toastId });
       } finally {
+          setIsUploading(false);
           setUploadTarget(null);
+          setUploadProgress(0);
+          if (fileInputRef.current) fileInputRef.current.value = '';
       }
   };
 
@@ -412,7 +434,6 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     return <Icon className="size-4" />;
   };
 
-  // Update return JSX
   return (
     <div className="space-y-6">
       <input 
@@ -500,17 +521,27 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
           </div>
         </CardContent>
       </Card>
-      {/* ... rest of the component */}
 
       {/* Archivos y media */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Archivos y media</CardTitle>
-            <Button size="sm" onClick={() => handleFileUpload('song')}>
-              <Plus className="size-4 mr-2" />
-              Añadir archivo
-            </Button>
+          <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center">
+                <CardTitle>Archivos y media</CardTitle>
+                <Button size="sm" onClick={() => handleFileUpload('song')} disabled={isUploading}>
+                  <Plus className="size-4 mr-2" />
+                  Añadir archivo
+                </Button>
+              </div>
+              {isUploading && (
+                  <div className="space-y-2">
+                      <div className="flex justify-between text-sm text-gray-500">
+                          <span>{uploadStatus}</span>
+                          <span>{uploadProgress}%</span>
+                      </div>
+                      <Progress value={uploadProgress} className="h-2" />
+                  </div>
+              )}
           </div>
         </CardHeader>
         <CardContent>
