@@ -91,7 +91,9 @@ export function ProjectHub() {
           // We likely need to construct the URL. 
           // Assuming /api/uploads/images/{filename} is served by Nginx or static resource handler.
           // Let's assume standard path for now: `/api/uploads/images/${filename}`
-          const fullUrl = `/api/uploads/images/${filename}`;
+          // Construct robust URL matching SongDetail logic
+          const baseUrl = import.meta.env.VITE_API_URL || '';
+          const fullUrl = `${baseUrl}/api/uploads/images/${filename}`;
           
           setEditData(prev => ({ ...prev, imageUrl: fullUrl }));
           toast.dismiss();
