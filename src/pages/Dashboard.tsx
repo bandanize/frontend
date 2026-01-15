@@ -68,7 +68,7 @@ export function Dashboard() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <User className="size-4 mr-2" />
-                  {user?.name}
+                  {user?.username}
                   {(invitations?.length || 0) > 0 && (
                     <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
                       {invitations.length}

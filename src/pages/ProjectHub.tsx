@@ -5,10 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/app/components/ui/dropdown-menu';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
-import { ArrowLeft, MessageSquare, Music, Users, Settings, LogOut } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Music, Users, Settings, LogOut, User, Mail } from 'lucide-react';
 import { ProjectChat } from '@/app/components/ProjectChat';
 import { SongManager } from '@/app/components/SongManager';
 import { MembersPanel } from '@/app/components/MembersPanel';
@@ -17,8 +18,8 @@ import { toast } from 'sonner';
 export function ProjectHub() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { currentProject, updateProject, leaveProject } = useProjects();
-  const { user } = useAuth();
+  const { currentProject, updateProject, leaveProject, invitations } = useProjects();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('songs');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editData, setEditData] = useState({
@@ -89,6 +90,7 @@ export function ProjectHub() {
             </div>
             <div className="flex gap-2">
             {currentProject.ownerId === user?.id ? (
+              <>
               <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline">
@@ -133,6 +135,40 @@ export function ProjectHub() {
                   </div>
                 </DialogContent>
               </Dialog>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <User className="size-4 mr-2" />
+                    {user?.username}
+                    {(invitations?.length || 0) > 0 && (
+                      <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                        {invitations.length}
+                      </span>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <Settings className="size-4 mr-2" />
+                    Mi Perfil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/invitations')}>
+                    <Mail className="size-4 mr-2" />
+                    Invitaciones
+                    {(invitations?.length || 0) > 0 && (
+                      <span className="ml-auto bg-red-100 text-red-600 text-xs rounded-full px-2 py-0.5">
+                        {invitations.length}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="size-4 mr-2" />
+                    Cerrar sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              </>
             ) : (
                 <Button variant="destructive" onClick={handleLeaveProject}>
                     <LogOut className="size-4 mr-2" />
