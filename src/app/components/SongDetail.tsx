@@ -342,22 +342,25 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
     }
   };
 
+  // Helper for generating UUID
+  const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
   const uploadFileWithRetry = async (url: string, formData: FormData, retries = 3, delay = 1000): Promise<any> => {
       try {
           return await api.post(url, formData, {
               headers: { 'Content-Type': 'multipart/form-data' },
-              timeout: 1000 * 60 * 30, // 30 minutes timeout
-              onUploadProgress: (progressEvent) => {
-                  const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-                  setUploadProgress(percentCompleted);
-              }
+              timeout: 1000 * 60 * 5, // 5 minutes per chunk
           });
       } catch (error: any) {
           if (retries > 0) {
               if (error.response && error.response.status >= 400 && error.response.status < 500) {
                   throw error; // Don't retry client errors (4xx)
               }
-              setUploadStatus(`Reintentando... (Intentos restantes: ${retries})`);
               await wait(delay);
               return uploadFileWithRetry(url, formData, retries - 1, delay * 2);
           }
@@ -372,29 +375,54 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
       setIsUploading(true);
       setUploadProgress(0);
       setUploadStatus('Iniciando subida...');
-      const toastId = toast.loading('Subiendo archivo...');
+      const toastId = toast.loading('Calculando chunks...');
 
       try {
-          let endpoint = 'file';
-          if (file.type.startsWith('image/')) endpoint = 'image';
-          else if (file.type.startsWith('audio/')) endpoint = 'audio';
-          else if (file.type.startsWith('video/')) endpoint = 'video';
+          let endpointCategory = 'file';
+          if (file.type.startsWith('image/')) endpointCategory = 'image';
+          else if (file.type.startsWith('audio/')) endpointCategory = 'audio';
+          else if (file.type.startsWith('video/')) endpointCategory = 'video';
 
-          const formData = new FormData();
-          formData.append('file', file);
+          const uploadId = generateUUID();
+          const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB chunks (Cloudflare limit is 100MB, so safe)
+          const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+          let finalFilename = '';
 
-          const uploadResponse = await uploadFileWithRetry(`/upload/${endpoint}`, formData);
-          const filename = uploadResponse.data;
+          for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+              const start = chunkIndex * CHUNK_SIZE;
+              const end = Math.min(start + CHUNK_SIZE, file.size);
+              const chunk = file.slice(start, end);
+
+              const formData = new FormData();
+              formData.append('file', chunk);
+              formData.append('chunkIndex', chunkIndex.toString());
+              formData.append('totalChunks', totalChunks.toString());
+              formData.append('uploadId', uploadId);
+              formData.append('originalFilename', file.name);
+              formData.append('folder', endpointCategory); // Backend expects singular or mapped 'files'
+
+              setUploadStatus(`Subiendo parte ${chunkIndex + 1} de ${totalChunks}...`);
+              
+              const response = await uploadFileWithRetry('/upload/chunk', formData);
+              
+              if (chunkIndex === totalChunks - 1) {
+                  finalFilename = response.data;
+              }
+
+              // Update progress
+              const percentCompleted = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+              setUploadProgress(percentCompleted);
+          }
 
           let folderName = 'files';
-          if (endpoint === 'image') folderName = 'images';
-          if (endpoint === 'audio') folderName = 'audio';
-          if (endpoint === 'video') folderName = 'videos';
+          if (endpointCategory === 'image') folderName = 'images';
+          if (endpointCategory === 'audio') folderName = 'audio';
+          if (endpointCategory === 'video') folderName = 'videos';
           
           const mediaFile = {
               name: file.name,
               type: file.type,
-              url: `/api/uploads/${folderName}/${filename}`
+              url: `/api/uploads/${folderName}/${finalFilename}`
           };
 
           if (uploadTarget.type === 'song') {
@@ -410,13 +438,11 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
           let errorMessage = 'Error al subir el archivo';
           
           if (error.response) {
-              if (error.response.status === 413) {
-                  errorMessage = 'Archivo demasiado grande (Límite excedido)';
+             if (error.response.status === 413) {
+                  errorMessage = 'Chunk demasiado grande (Error inesperado)';
               } else if (error.response.status === 524) {
-                  errorMessage = 'Timeout (Cloudflare). Prueba un archivo más pequeño.';
+                  errorMessage = 'Timeout en subida de chunk.';
               }
-          } else if (error.code === 'ECONNABORTED') {
-               errorMessage = 'La subida tardó demasiado.';
           }
 
           toast.error(errorMessage, { id: toastId });
