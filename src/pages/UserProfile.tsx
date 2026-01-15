@@ -56,6 +56,20 @@ export function UserProfile() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user?.id) return;
+    
+    if (window.confirm('¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer y perderás el acceso a todas tus bandas y datos.')) {
+      try {
+        await api.delete(`/users/${user.id}`);
+        toast.success('Cuenta eliminada correctamente');
+        logout();
+      } catch (error: any) {
+        toast.error(error.response?.data || 'Error al eliminar la cuenta');
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       <header className="bg-white shadow-sm border-b">
@@ -204,8 +218,8 @@ export function UserProfile() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="destructive" onClick={logout} className="w-full">
-                Cerrar sesión
+              <Button variant="destructive" onClick={handleDeleteAccount} className="w-full">
+                Eliminar cuenta
               </Button>
             </CardContent>
           </Card>

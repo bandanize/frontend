@@ -766,7 +766,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                                     )}
 
                                     <a 
-                                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:8080'}${file.url}`} 
+                                      href={`${(import.meta.env.VITE_API_URL || '') + (file.url.startsWith('/uploads') ? '/api' + file.url : file.url)}`} 
                                       download 
                                       target="_blank"
                                       rel="noopener noreferrer"
