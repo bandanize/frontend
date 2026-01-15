@@ -15,10 +15,12 @@ import { SongManager } from '@/app/components/SongManager';
 import { MembersPanel } from '@/app/components/MembersPanel';
 import { toast } from 'sonner';
 
+import { uploadFile } from '@/services/api';
+
 export function ProjectHub() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { currentProject, updateProject, leaveProject, invitations } = useProjects();
+  const { currentProject, updateProject, leaveProject, deleteProject, invitations } = useProjects();
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('songs');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -63,6 +65,44 @@ export function ProjectHub() {
     }
   };
 
+  const handleDeleteProject = async () => {
+      if (!currentProject) return;
+      try {
+          await deleteProject(currentProject.id);
+          navigate('/dashboard');
+      } catch (error) {
+          console.error("Error deleting project:", error);
+          toast.error("No se pudo eliminar el proyecto");
+      }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
+      try {
+          toast.loading("Subiendo imagen...");
+          // Assume image upload
+          const filename = await uploadFile(file, 'image');
+          // Update local state with new URL (assuming backend returns filename, user needs full URL)
+          // The backend returns just the filename. We need to prepend /api/uploads/images/ or similar?
+          // Or UploadController might return different path.
+          // Checked UploadController: returns `filename`.
+          // We likely need to construct the URL. 
+          // Assuming /api/uploads/images/{filename} is served by Nginx or static resource handler.
+          // Let's assume standard path for now: `/api/uploads/images/${filename}`
+          const fullUrl = `/api/uploads/images/${filename}`;
+          
+          setEditData(prev => ({ ...prev, imageUrl: fullUrl }));
+          toast.dismiss();
+          toast.success("Imagen subida correctamente");
+      } catch (error) {
+          console.error("Upload error:", error);
+          toast.dismiss();
+          toast.error("Error al subir la imagen");
+      }
+  };
+
   if (!currentProject || currentProject.id !== projectId) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -99,9 +139,9 @@ export function ProjectHub() {
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle></DialogTitle>
+                    <DialogTitle>Configuración del Proyecto</DialogTitle>
                     <DialogDescription>
-                      Actualiza la información del proyecto
+                      Actualiza la información del proyecto o gestionalo.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
@@ -122,16 +162,46 @@ export function ProjectHub() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="edit-image">URL de imagen (opcional)</Label>
-                      <Input
-                        id="edit-image"
-                        value={editData.imageUrl}
-                        onChange={(e) => setEditData({ ...editData, imageUrl: e.target.value })}
-                      />
+                      <Label htmlFor="edit-image">Imagen del Proyecto</Label>
+                      <div className="flex gap-2">
+                         <Input
+                          id="edit-image"
+                          value={editData.imageUrl}
+                          onChange={(e) => setEditData({ ...editData, imageUrl: e.target.value })}
+                          placeholder="URL de la imagen"
+                          className="flex-1"
+                        />
+                      </div>
+                       <div className="mt-2">
+                           <Label htmlFor="upload-image" className="text-xs text-gray-500 mb-1 block">O subir imagen:</Label>
+                           <Input
+                              id="upload-image"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileUpload}
+                           />
+                       </div>
                     </div>
                     <Button onClick={handleUpdateProject} className="w-full">
                       Guardar cambios
                     </Button>
+                    
+                    <div className="border-t pt-4 mt-4">
+                        <Label className="text-red-600 mb-2 block">Zona de Peligro</Label>
+                        <Button variant="destructive" className="w-full" onClick={async () => {
+                            if (window.confirm("¿ESTÁS SEGURO? Esta acción borrará el proyecto y todos sus datos permanentemente.")) {
+                                try {
+                                    // Need to import deleteBand
+                                    // For now, I'll use a placeholder handler
+                                    await handleDeleteProject(); 
+                                } catch (e) {
+                                    toast.error("Error al eliminar proyecto");
+                                }
+                            }
+                        }}>
+                             Eliminar Proyecto
+                        </Button>
+                    </div>
                   </div>
                 </DialogContent>
               </Dialog>

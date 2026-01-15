@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import api from '@/services/api';
+import { toast } from 'sonner';
 
 export interface Member {
   id: string;
@@ -78,6 +79,7 @@ interface ProjectContextType {
   selectProject: (projectId: string) => void;
   inviteMember: (projectId: string, email: string) => Promise<void>;
   leaveProject: (projectId: string) => Promise<void>;
+  deleteProject: (projectId: string) => Promise<void>;
   fetchInvitations: () => Promise<void>;
   acceptInvitation: (invitationId: string) => Promise<void>;
   rejectInvitation: (invitationId: string) => Promise<void>;
@@ -292,6 +294,20 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           console.error("Error leaving project", error);
           throw error;
       }
+  };
+
+  const deleteProject = async (projectId: string) => {
+    try {
+        await api.delete(`/bands/${projectId}`);
+        setProjects(prev => prev.filter(p => p.id !== projectId));
+        if (currentProject?.id === projectId) {
+            setCurrentProject(null);
+        }
+        toast.success('Proyecto eliminado');
+    } catch (error) {
+        console.error("Error deleting project:", error);
+        throw error;
+    }
   };
 
   const sendMessage = async (projectId: string, message: string) => {
@@ -581,6 +597,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       selectProject,
       inviteMember,
       leaveProject,
+      deleteProject,
       fetchInvitations,
       acceptInvitation,
       rejectInvitation,

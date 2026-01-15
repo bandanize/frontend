@@ -42,4 +42,20 @@ api.interceptors.response.use(
     }
 );
 
+export const deleteBand = async (bandId: string) => {
+    const response = await api.delete(`/bands/${bandId}`);
+    return response.data;
+};
+
+export const uploadFile = async (file: File, type: 'image' | 'audio' | 'video' | 'file' = 'file') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(`/upload/${type}`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data; // Returns filename/URL
+};
+
 export default api;

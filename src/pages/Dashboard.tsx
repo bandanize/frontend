@@ -11,6 +11,8 @@ import { LogOut, Plus, Music2, Users, User, Settings, Mail } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import { WelcomeModal } from '@/app/components/WelcomeModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/app/components/ui/dropdown-menu';
+import { uploadFile } from '@/services/api';
+import { toast } from 'sonner';
 
 export function Dashboard() {
   const { user, logout } = useAuth();
@@ -44,7 +46,26 @@ export function Dashboard() {
       setProjectDescription('');
       setProjectImage('');
       setOpen(false);
+      toast.success('Proyecto creado correctamente');
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
+      try {
+          toast.loading("Subiendo imagen...");
+          const filename = await uploadFile(file, 'image');
+          const fullUrl = `/api/uploads/images/${filename}`;
+          setProjectImage(fullUrl);
+          toast.dismiss();
+          toast.success("Imagen subida");
+      } catch (error) {
+          console.error("Upload error:", error);
+          toast.dismiss();
+          toast.error("Error al subir imagen");
+      }
   };
 
   const handleProjectClick = (projectId: string) => {
@@ -139,12 +160,24 @@ export function Dashboard() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="project-image">URL de imagen (opcional)</Label>
-                  <Input
-                    id="project-image"
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    value={projectImage}
-                    onChange={(e) => setProjectImage(e.target.value)}
-                  />
+                   <div className="flex gap-2">
+                      <Input
+                        id="project-image"
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                        value={projectImage}
+                        onChange={(e) => setProjectImage(e.target.value)}
+                        className="flex-1"
+                      />
+                   </div>
+                   <div className="mt-2">
+                       <Label htmlFor="create-upload-image" className="text-xs text-gray-500 mb-1 block">O subir imagen:</Label>
+                       <Input
+                          id="create-upload-image"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                       />
+                   </div>
                 </div>
                 <Button onClick={handleCreateProject} className="w-full">
                   Crear proyecto
