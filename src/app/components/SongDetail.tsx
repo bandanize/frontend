@@ -386,6 +386,15 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
           const uploadId = generateUUID();
           const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB chunks (Cloudflare limit is 100MB, so safe)
           const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+          
+          if (file.size === 0) {
+            toast.error("El archivo está vacío");
+            setUploadTarget(null);
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+          }
+
           let finalFilename = '';
 
           for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
@@ -401,7 +410,9 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
               formData.append('originalFilename', file.name);
               formData.append('folder', endpointCategory); // Backend expects singular or mapped 'files'
 
-              setUploadStatus(`Subiendo parte ${chunkIndex + 1} de ${totalChunks}...`);
+              const currentProgress = Math.round((chunkIndex / totalChunks) * 100);
+              setUploadStatus(`Subiendo parte ${chunkIndex + 1} de ${totalChunks} (${currentProgress}%)...`);
+              toast.loading(`Subiendo parte ${chunkIndex + 1} de ${totalChunks} (${currentProgress}%)`, { id: toastId });
               
               const response = await uploadFileWithRetry('/upload/chunk', formData);
               
@@ -409,7 +420,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                   finalFilename = response.data;
               }
 
-              // Update progress
+              // Update progress bar to completion of this chunk
               const percentCompleted = Math.round(((chunkIndex + 1) / totalChunks) * 100);
               setUploadProgress(percentCompleted);
           }
