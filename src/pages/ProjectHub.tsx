@@ -93,12 +93,11 @@ export function ProjectHub() {
                 <DialogTrigger asChild>
                   <Button variant="outline">
                     <Settings className="size-4 mr-2" />
-                    Editar proyecto
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Editar proyecto</DialogTitle>
+                    <DialogTitle></DialogTitle>
                     <DialogDescription>
                       Actualiza la información del proyecto
                     </DialogDescription>

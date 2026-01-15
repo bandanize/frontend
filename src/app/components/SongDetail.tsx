@@ -49,7 +49,7 @@ function TablatureToolbar({ onInsert }: { onInsert: (text: string) => void }) {
               onClick={() => onInsert(guitarStrings)}
             >
               <Guitar className="size-4 mr-2" />
-              Guitarra (6 cuerdas)
+              Guitarra
             </Button>
             <Button
               type="button"
@@ -58,7 +58,7 @@ function TablatureToolbar({ onInsert }: { onInsert: (text: string) => void }) {
               onClick={() => onInsert(bassStrings)}
             >
               <Music2 className="size-4 mr-2" />
-              Bajo (4 cuerdas)
+              Bajo
             </Button>
             <Button
               type="button"
@@ -613,7 +613,7 @@ export function SongDetail({ listId, song, onBack }: SongDetailProps) {
                       <TablatureToolbar onInsert={handleInsertText} />
                       
                       <div className="space-y-2">
-                        <Label>Tablatura (estilo Ultimate Guitar)</Label>
+                        <Label>Tablatura</Label>
                         <Textarea
                           ref={textareaRef}
                           value={editingContent}

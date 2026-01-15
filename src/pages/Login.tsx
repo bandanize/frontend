@@ -4,7 +4,6 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { Music2 } from 'lucide-react';
 
 export function Login() {
   const { login } = useAuth();
@@ -32,11 +31,11 @@ export function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-4">
-            <Music2 className="size-12 text-purple-600" />
+            <img src="/favicon.svg" alt="Bandanize" className="size-20" />
           </div>
-          <CardTitle className="text-2xl text-center">Bienvenido</CardTitle>
+          <CardTitle className="text-2xl text-center">Bandanize</CardTitle>
           <CardDescription className="text-center">
-            Inicia sesión en tu cuenta de músico
+            Inicia sesión en tu cuenta
           </CardDescription>
         </CardHeader>
         <CardContent>
