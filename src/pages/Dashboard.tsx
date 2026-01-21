@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjects } from '@/contexts/ProjectContext';
 import { Button } from '@/app/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/app/components/ui/dialog';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
-import { LogOut, Plus, Music2, Users, User, Settings, Mail } from 'lucide-react';
+import { LogOut, Plus, Music2, Users, User, Settings, Mail, Cookie } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WelcomeModal } from '@/app/components/WelcomeModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/app/components/ui/dropdown-menu';
@@ -22,6 +21,7 @@ export function Dashboard() {
   const [projectDescription, setProjectDescription] = useState('');
   const [projectImage, setProjectImage] = useState('');
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showCookies, setShowCookies] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -74,112 +74,126 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <img src="/favicon.svg" alt="Bandanize" className="size-14" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Bandanize</h1>
-                <p className="text-sm text-gray-600">Bienvenido, {user?.name}</p>
-              </div>
+    <div className="min-h-screen bg-[#0B0B0C] relative">
+      {/* Header */}
+      <header className="h-[84px] bg-[#151518] border-b border-black/10 shadow-[0px_1px_3px_rgba(0,0,0,0.1)] flex flex-col justify-center px-[420px]">
+        <div className="w-[1216px] flex justify-between items-center mx-auto">
+          {/* Logo Section */}
+          <div className="flex items-center gap-3">
+            <div className="w-[52px] h-[52px] bg-white/10 rounded-full flex items-center justify-center">
+                 <img src="/favicon.svg" alt="Bandanize" className="size-8" />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <User className="size-4 mr-2" />
-                  {user?.username}
-                  {(invitations?.length || 0) > 0 && (
-                    <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                      {invitations.length}
-                    </span>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <Settings className="size-4 mr-2" />
-                  Mi Perfil
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/invitations')}>
-                  <Mail className="size-4 mr-2" />
-                  Invitaciones
-                  {(invitations?.length || 0) > 0 && (
-                    <span className="ml-auto bg-red-100 text-red-600 text-xs rounded-full px-2 py-0.5">
-                      {invitations.length}
-                    </span>
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
-                  <LogOut className="size-4 mr-2" />
-                  Cerrar sesión
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div>
+              <h1 className="text-[24px] font-normal font-poppins text-[#EDEDED] leading-8">Bandanize</h1>
+              <p className="text-[14px] font-normal font-poppins text-[#EDEDED]/60 leading-5">Bienvenido, {user?.name}</p>
+            </div>
           </div>
+
+          {/* User Button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-[148px] h-[36px] bg-[#151518] border-[#2B2B31] rounded-[8px] text-[#EDEDED] text-[14px] font-normal font-sans hover:bg-[#1f1f22] hover:text-white"
+              >
+                <User className="size-4 mr-2" />
+                <span className="truncate max-w-[80px]">{user?.username}</span>
+                {(invitations?.length || 0) > 0 && (
+                  <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
+                    {invitations.length}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <Settings className="size-4 mr-2" />
+                Mi Perfil
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/invitations')}>
+                <Mail className="size-4 mr-2" />
+                Invitaciones
+                {(invitations?.length || 0) > 0 && (
+                  <span className="ml-auto bg-red-100 text-red-600 text-xs rounded-full px-2 py-0.5">
+                    {invitations.length}
+                  </span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="size-4 mr-2" />
+                Cerrar sesión
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Tus proyectos</h2>
+      {/* Main Content */}
+      <main className="w-[1280px] mx-auto py-8">
+        
+        {/* Projects Header Row */}
+        <div className="flex justify-between items-center mb-6 w-[1216px] mx-auto h-[36px]">
+          <h2 className="text-[20px] font-bold text-[#EDEDED] font-sans leading-7">Tus proyectos</h2>
+          
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="size-4 mr-2" />
+              <Button className="w-[148px] h-[36px] bg-[#A3E635] hover:bg-[#92d030] text-[#151518] rounded-[8px] font-sans text-[14px] font-normal">
+                <Plus className="size-4 mr-2 stroke-[1.33px] text-[#151518]" />
                 Nuevo Proyecto
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] rounded-lg">
+            <DialogContent className="bg-[#151518] border-[#2B2B31] text-[#EDEDED]">
               <DialogHeader>
-                <DialogTitle>Crear nuevo proyecto</DialogTitle>
-                <DialogDescription>
+                <DialogTitle className="text-[#EDEDED]">Crear nuevo proyecto</DialogTitle>
+                <DialogDescription className="text-[#EDEDED]/60">
                   Crea un proyecto en solitario o una banda musical
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="project-name">Nombre del proyecto</Label>
+                  <Label htmlFor="project-name" className="text-[#EDEDED]">Nombre del proyecto</Label>
                   <Input
                     id="project-name"
                     placeholder="Ej: The Sodawaves"
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
+                    className="bg-[#0B0B0C] border-[#2B2B31] text-[#EDEDED]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="project-description">Descripción</Label>
+                  <Label htmlFor="project-description" className="text-[#EDEDED]">Descripción</Label>
                   <Textarea
                     id="project-description"
                     placeholder="Ej: Banda de alternative rock"
                     value={projectDescription}
                     onChange={(e) => setProjectDescription(e.target.value)}
+                    className="bg-[#0B0B0C] border-[#2B2B31] text-[#EDEDED]"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-image">Imagen</Label>
-                   <div className="flex gap-2">
-                      <Input
+                 <div className="space-y-2">
+                  <Label htmlFor="project-image" className="text-[#EDEDED]">Imagen</Label>
+                  <div className="flex gap-2">
+                       <Input
                         id="project-image"
                         placeholder="https://ejemplo.com/imagen.jpg"
                         value={projectImage}
                         onChange={(e) => setProjectImage(e.target.value)}
-                        className="flex-1"
+                        className="bg-[#0B0B0C] border-[#2B2B31] text-[#EDEDED] flex-1"
                       />
-                   </div>
-                   <div className="mt-2">
-                       <Label htmlFor="create-upload-image" className="text-xs text-gray-500 mb-1 block">O subir imagen:</Label>
+                  </div>
+                   <div className="mt-2 text-[#EDEDED]/60">
+                       <Label htmlFor="create-upload-image" className="text-xs mb-1 block">O subir imagen:</Label>
                        <Input
                           id="create-upload-image"
                           type="file"
                           accept="image/*"
                           onChange={handleFileUpload}
+                          className="bg-[#0B0B0C] border-[#2B2B31] text-[#EDEDED]"
                        />
                    </div>
                 </div>
-                <Button onClick={handleCreateProject} className="w-full">
+                <Button onClick={handleCreateProject} className="w-full bg-[#A3E635] text-[#151518] hover:bg-[#92d030]">
                   Crear proyecto
                 </Button>
               </div>
@@ -187,54 +201,105 @@ export function Dashboard() {
           </Dialog>
         </div>
 
+        {/* Project List or Empty State */}
         {projects.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardHeader>
-              <Music2 className="size-16 mx-auto text-gray-400 mb-4" />
-              <CardTitle>No tienes proyectos aún</CardTitle>
-              <CardDescription>
-                Crea tu primer proyecto musical para empezar
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <div className="w-[1166px] h-[336px] mx-auto flex flex-col items-center justify-center gap-6">
+            <div className="w-[327px] h-[206px] bg-white/5 rounded-lg flex items-center justify-center">
+                 <Music2 className="size-20 text-[#EDEDED]/20" />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+                <h3 className="text-[20px] font-bold text-[#EDEDED] font-sans leading-6 text-center">No tienes proyectos aún</h3>
+                <p className="text-[14px] font-normal text-[#EDEDED]/60 font-sans leading-5 text-center">Crea tu primer proyecto musical</p>
+            </div>
+            <Button 
+                onClick={() => setOpen(true)}
+                className="w-[148px] h-[36px] bg-[#0B0B0C] border border-[#2B2B31] rounded-[8px] text-[#EDEDED] font-sans text-[14px] font-normal hover:bg-[#1f1f22]"
+            >
+                 <Plus className="size-4 mr-2 stroke-[1.33px] text-[#EDEDED]" />
+                 Nuevo Proyecto
+            </Button>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-[1216px] mx-auto">
             {projects.map((project) => (
-              <Card
+              <div
                 key={project.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer"
+                className="w-[389px] h-[140px] bg-[#151518] border border-[#2B2B31] rounded-[14px] p-[12px] gap-[10px] flex cursor-pointer hover:shadow-lg transition-shadow"
                 onClick={() => handleProjectClick(project.id)}
               >
-                {project.imageUrl ? (
-                  <div className="h-48 overflow-hidden rounded-t-lg">
-                    <img
-                      src={project.imageUrl}
-                      alt={project.name}
-                      className="w-full h-full object-cover"
-                    />
+                  {/* Image Section */}
+                  <div className="w-[116px] h-[116px] flex-shrink-0 rounded-[9px] overflow-hidden flex items-center justify-center">
+                    {project.imageUrl ? (
+                        <img
+                          src={project.imageUrl}
+                          alt={project.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-[linear-gradient(135deg,#A3E635_0%,#FF96A5_100%)] flex items-center justify-center">
+                          <Music2 className="size-10 text-[#222424]" />
+                        </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="h-48 bg-gradient-to-br from-purple-400 to-blue-400 rounded-t-lg flex items-center justify-center">
-                    <Music2 className="size-16 text-white" />
+
+                  {/* Content Section */}
+                  <div className="flex flex-col h-[116px] flex-1 gap-1">
+                      <div className="flex flex-col gap-0.5 flex-1">
+                           <h3 className="text-[16px] font-normal font-poppins text-[#EDEDED] leading-4 truncate">{project.name}</h3>
+                           <p className="text-[16px] font-normal font-poppins text-[#EDEDED] leading-6 line-clamp-3 text-ellipsis overflow-hidden h-[72px] opacity-60">
+                               {project.description || 'Sin descripción'}
+                           </p>
+                      </div>
+                      <div className="flex items-center gap-2 h-[20px]">
+                           <div className="flex items-center gap-2 text-[#EDEDED]">
+                                <Users className="size-4" />
+                                <span className="text-[14px] font-normal font-sans leading-5">
+                                    {project.members.length} {project.members.length === 1 ? 'miembro' : 'miembros'}
+                                </span>
+                           </div>
+                      </div>
                   </div>
-                )}
-                <CardHeader>
-                  <CardTitle>{project.name}</CardTitle>
-                  <CardDescription>{project.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="size-4 mr-2" />
-                    {project.members.length} {project.members.length === 1 ? 'miembro' : 'miembros'}
-                  </div>
-                </CardContent>
-              </Card>
+              </div>
             ))}
           </div>
         )}
       </main>
 
       <WelcomeModal open={showWelcome} onClose={handleCloseWelcome} />
+      
+      {/* Cookies Overlay */}
+      {showCookies && (
+          <div className="fixed bottom-4 left-[389px] w-[439px] h-[444px] bg-[#151518] rounded-[14px] flex flex-col justify-end items-center pb-6 shadow-2xl border border-white/5 z-50">
+             {/* Image placeholder */}
+             <div className="w-[435px] h-[280px] bg-white/5 rounded-t-[12px] flex items-center justify-center">
+                 <Cookie className="size-16 text-[#EDEDED]/20" />
+             </div>
+             
+             <div className="w-full px-6 pt-4 flex flex-col gap-4">
+                 <div className="flex flex-col gap-2">
+                     <h4 className="text-[20px] font-medium font-poppins text-[#EDEDED] leading-6">Cookies & Privacy</h4>
+                     <p className="text-[12px] font-normal font-poppins text-[#EDEDED] leading-4">
+                         We use cookies to personalise your experience. By continuing to visit this website you agree to our use of cookies. Learn more
+                     </p>
+                 </div>
+                 
+                 <div className="flex gap-4 w-full">
+                     <Button 
+                        onClick={() => setShowCookies(false)}
+                        className="flex-1 h-[36px] bg-[#151518] border border-[#2B2B31] rounded-[8px] text-[#EDEDED] font-poppins text-[14px] font-normal hover:bg-[#1f1f22]"
+                     >
+                         Decline
+                     </Button>
+                     <Button 
+                        onClick={() => setShowCookies(false)}
+                        className="flex-1 h-[36px] bg-[#A3E635] hover:bg-[#92d030] rounded-[8px] text-[#151518] font-poppins text-[14px] font-normal"
+                     >
+                         Accept
+                     </Button>
+                 </div>
+             </div>
+          </div>
+      )}
     </div>
   );
 }

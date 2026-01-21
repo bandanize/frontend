@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Textarea } from '@/app/components/ui/textarea';
-import { ArrowLeft, MessageSquare, Music, Users, Settings, LogOut, User, Mail } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Music, Users, Settings, LogOut, User, Mail, PenLine } from 'lucide-react';
 import { ProjectChat } from '@/app/components/ProjectChat';
 import { SongManager } from '@/app/components/SongManager';
 import { MembersPanel } from '@/app/components/MembersPanel';
@@ -82,16 +82,7 @@ export function ProjectHub() {
       
       try {
           toast.loading("Subiendo imagen...");
-          // Assume image upload
           const filename = await uploadFile(file, 'image');
-          // Update local state with new URL (assuming backend returns filename, user needs full URL)
-          // The backend returns just the filename. We need to prepend /api/uploads/images/ or similar?
-          // Or UploadController might return different path.
-          // Checked UploadController: returns `filename`.
-          // We likely need to construct the URL. 
-          // Assuming /api/uploads/images/{filename} is served by Nginx or static resource handler.
-          // Let's assume standard path for now: `/api/uploads/images/${filename}`
-          // Construct robust URL matching SongDetail logic
           const baseUrl = import.meta.env.VITE_API_URL || '';
           const fullUrl = `${baseUrl}/api/uploads/images/${filename}`;
           
@@ -107,10 +98,10 @@ export function ProjectHub() {
 
   if (!currentProject || currentProject.id !== projectId) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0B0C]">
         <div className="text-center">
-          <p className="text-gray-600">Cargando proyecto...</p>
-          <Button onClick={() => navigate('/dashboard')} className="mt-4">
+          <p className="text-[#EDEDED]">Cargando proyecto...</p>
+          <Button onClick={() => navigate('/dashboard')} className="mt-4 bg-[#A3E635] text-[#151518]">
             Volver al dashboard
           </Button>
         </div>
@@ -119,82 +110,101 @@ export function ProjectHub() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-              <ArrowLeft className="size-4" />
+    <div className="min-h-screen bg-[#0B0B0C] relative">
+      {/* Header */}
+      <header className="h-[85px] bg-[#151518] border-b border-black/10 shadow-[0px_1px_3px_rgba(0,0,0,0.1)] flex flex-col justify-center px-[420px]">
+        <div className="w-[1216px] mx-auto flex items-center gap-4">
+            <Button 
+                variant="ghost" 
+                onClick={() => navigate('/dashboard')} 
+                className="w-[40px] h-[36px] bg-transparent hover:bg-white/5 rounded-[8px] p-0"
+            >
+              <ArrowLeft className="size-4 text-[#EDEDED]" />
             </Button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{currentProject.name}</h1>
-              <p className="text-sm text-gray-600">{currentProject.description}</p>
+            
+            <div className="flex-1 flex items-center gap-3">
+               <div className="size-[32px] rounded-[3px] bg-white/10 flex items-center justify-center overflow-hidden">
+                   {currentProject.imageUrl ? (
+                       <img src={currentProject.imageUrl} alt={currentProject.name} className="w-full h-full object-cover" />
+                   ) : (
+                       <div className="size-[32px] bg-[linear-gradient(135deg,#A3E635_0%,#FF96A5_100%)]" />
+                   )}
+               </div>
+               <div>
+                   <h1 className="text-[24px] font-normal font-poppins text-[#EDEDED] leading-8">{currentProject.name}</h1>
+                   <div className="flex items-center gap-1 mt-1">
+                       <span className="w-[7px] h-[7px] bg-[#A3E635] rounded-full inline-block"></span>
+                       <span className="text-[14px] font-normal font-poppins text-[#EDEDED]/60 leading-5">2 Online</span>
+                   </div>
+               </div>
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex gap-2 items-center">
             {currentProject.ownerId === user?.id ? (
               <>
               <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Settings className="size-4 mr-2" />
+                  <Button variant="ghost" className="text-[#EDEDED] hover:text-white hover:bg-white/5 font-sans text-[14px] font-normal">
+                    Editar proyecto
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="bg-[#151518] border-[#2B2B31] text-[#EDEDED]">
                   <DialogHeader>
-                    <DialogTitle>Configuración del Proyecto</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className="text-[#EDEDED]">Configuración del Proyecto</DialogTitle>
+                    <DialogDescription className="text-[#EDEDED]/60">
                       Actualiza la información del proyecto o gestionalo.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
                     <div className="space-y-2">
-                      <Label htmlFor="edit-name">Nombre del proyecto</Label>
+                      <Label htmlFor="edit-name" className="text-[#EDEDED]">Nombre del proyecto</Label>
                       <Input
                         id="edit-name"
                         value={editData.name}
                         onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                        className="bg-[#0B0B0C] border-[#2B2B31] text-[#EDEDED]"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="edit-description">Descripción</Label>
+                      <Label htmlFor="edit-description" className="text-[#EDEDED]">Descripción</Label>
                       <Textarea
                         id="edit-description"
                         value={editData.description}
                         onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                        className="bg-[#0B0B0C] border-[#2B2B31] text-[#EDEDED]"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="edit-image">Imagen del Proyecto</Label>
+                      <Label htmlFor="edit-image" className="text-[#EDEDED]">Imagen del Proyecto</Label>
                       <div className="flex gap-2">
                          <Input
                           id="edit-image"
                           value={editData.imageUrl}
                           onChange={(e) => setEditData({ ...editData, imageUrl: e.target.value })}
                           placeholder="URL de la imagen"
-                          className="flex-1"
+                          className="flex-1 bg-[#0B0B0C] border-[#2B2B31] text-[#EDEDED]"
                         />
                       </div>
                        <div className="mt-2">
-                           <Label htmlFor="upload-image" className="text-xs text-gray-500 mb-1 block">O subir imagen:</Label>
+                           <Label htmlFor="upload-image" className="text-xs text-[#EDEDED]/60 mb-1 block">O subir imagen:</Label>
                            <Input
                               id="upload-image"
                               type="file"
                               accept="image/*"
                               onChange={handleFileUpload}
+                              className="bg-[#0B0B0C] border-[#2B2B31] text-[#EDEDED]"
                            />
                        </div>
                     </div>
-                    <Button onClick={handleUpdateProject} className="w-full">
+                    <Button onClick={handleUpdateProject} className="w-full bg-[#A3E635] text-[#151518] hover:bg-[#92d030]">
                       Guardar cambios
                     </Button>
                     
-                    <div className="border-t pt-4 mt-4">
-                        <Label className="text-red-600 mb-2 block">Zona de Peligro</Label>
-                        <Button variant="destructive" className="w-full" onClick={async () => {
+                    <div className="border-t border-[#2B2B31] pt-4 mt-4">
+                        <Label className="text-red-500 mb-2 block">Zona de Peligro</Label>
+                        <Button variant="destructive" className="w-full bg-red-900/20 text-red-500 hover:bg-red-900/40 border border-red-900/50" onClick={async () => {
                             if (window.confirm("¿ESTÁS SEGURO? Esta acción borrará el proyecto y todos sus datos permanentemente.")) {
                                 try {
-                                    // Need to import deleteBand
-                                    // For now, I'll use a placeholder handler
                                     await handleDeleteProject(); 
                                 } catch (e) {
                                     toast.error("Error al eliminar proyecto");
@@ -207,79 +217,64 @@ export function ProjectHub() {
                   </div>
                 </DialogContent>
               </Dialog>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <User className="size-4 mr-2" />
-                    {user?.username}
-                    {(invitations?.length || 0) > 0 && (
-                      <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
-                        {invitations.length}
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => navigate('/profile')}>
-                    <Settings className="size-4 mr-2" />
-                    Mi Perfil
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/invitations')}>
-                    <Mail className="size-4 mr-2" />
-                    Invitaciones
-                    {(invitations?.length || 0) > 0 && (
-                      <span className="ml-auto bg-red-100 text-red-600 text-xs rounded-full px-2 py-0.5">
-                        {invitations.length}
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout}>
-                    <LogOut className="size-4 mr-2" />
-                    Cerrar sesión
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              
+              <Button 
+                variant="outline" 
+                className="w-[40px] h-[36px] bg-[#151518] border-[#2B2B31] rounded-[8px] p-0 hover:bg-[#1f1f22]"
+              >
+                 <Settings className="size-4 text-[#EDEDED]" />
+              </Button>
+
               </>
             ) : (
-                <Button variant="destructive" onClick={handleLeaveProject}>
+                <Button variant="destructive" onClick={handleLeaveProject} className="bg-red-900/20 text-red-500 hover:bg-red-900/40">
                     <LogOut className="size-4 mr-2" />
                     Abandonar
                 </Button>
             )}
             </div>
-          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="songs">
+      <main className="w-[1216px] mx-auto py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-[#151518] rounded-[14px] p-0 h-[36px] flex items-center w-[303px] mx-auto">
+            <TabsTrigger 
+                value="songs"
+                className="data-[state=active]:bg-[#0B0B0C] data-[state=active]:text-[#EDEDED] data-[state=active]:border data-[state=active]:border-[#2B2B31] data-[state=active]:shadow-none text-[#EDEDED]/60 rounded-[14px] h-[36px] flex-1 font-sans font-normal text-[14px]"
+            >
               <Music className="size-4 mr-2" />
               Canciones
             </TabsTrigger>
-            <TabsTrigger value="chat">
+            <TabsTrigger 
+                value="chat"
+                className="data-[state=active]:bg-[#0B0B0C] data-[state=active]:text-[#EDEDED] data-[state=active]:border data-[state=active]:border-[#2B2B31] data-[state=active]:shadow-none text-[#EDEDED]/60 rounded-[14px] h-[36px] flex-1 font-sans font-normal text-[14px]"
+            >
               <MessageSquare className="size-4 mr-2" />
               Chat
             </TabsTrigger>
-            <TabsTrigger value="members">
+            <TabsTrigger 
+                value="members"
+                className="data-[state=active]:bg-[#0B0B0C] data-[state=active]:text-[#EDEDED] data-[state=active]:border data-[state=active]:border-[#2B2B31] data-[state=active]:shadow-none text-[#EDEDED]/60 rounded-[14px] h-[36px] flex-1 font-sans font-normal text-[14px]"
+            >
               <Users className="size-4 mr-2" />
               Miembros
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="songs">
-            <SongManager />
-          </TabsContent>
+          <div className="mt-8">
+            <TabsContent value="songs" className="m-0">
+                <SongManager />
+            </TabsContent>
 
-          <TabsContent value="chat">
-            <ProjectChat />
-          </TabsContent>
+            <TabsContent value="chat" className="m-0">
+                <ProjectChat />
+            </TabsContent>
 
-          <TabsContent value="members">
-            <MembersPanel />
-          </TabsContent>
+            <TabsContent value="members" className="m-0">
+                <MembersPanel />
+            </TabsContent>
+          </div>
         </Tabs>
       </main>
     </div>
