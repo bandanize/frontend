@@ -112,8 +112,8 @@ export function ProjectHub() {
   return (
     <div className="min-h-screen bg-[#0B0B0C] relative">
       {/* Header */}
-      <header className="h-[85px] bg-[#151518] border-b border-black/10 shadow-[0px_1px_3px_rgba(0,0,0,0.1)] flex flex-col justify-center px-[420px]">
-        <div className="w-[1216px] mx-auto flex items-center gap-4">
+      <header className="h-auto min-h-[85px] py-4 bg-[#151518] border-b border-black/10 shadow-[0px_1px_3px_rgba(0,0,0,0.1)] flex flex-col justify-center w-full">
+        <div className="max-w-[1216px] w-full mx-auto flex flex-wrap items-center gap-4 px-4 sm:px-6">
             <Button 
                 variant="ghost" 
                 onClick={() => navigate('/dashboard')} 
@@ -122,16 +122,16 @@ export function ProjectHub() {
               <ArrowLeft className="size-4 text-[#EDEDED]" />
             </Button>
             
-            <div className="flex-1 flex items-center gap-3">
-               <div className="size-[32px] rounded-[3px] bg-white/10 flex items-center justify-center overflow-hidden">
+            <div className="flex-1 flex items-center gap-3 min-w-[200px]">
+               <div className="size-[32px] rounded-[3px] bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                    {currentProject.imageUrl ? (
                        <img src={currentProject.imageUrl} alt={currentProject.name} className="w-full h-full object-cover" />
                    ) : (
                        <div className="size-[32px] bg-[linear-gradient(135deg,#A3E635_0%,#FF96A5_100%)]" />
                    )}
                </div>
-               <div>
-                   <h1 className="text-[24px] font-normal font-poppins text-[#EDEDED] leading-8">{currentProject.name}</h1>
+               <div className="min-w-0">
+                   <h1 className="text-[20px] sm:text-[24px] font-normal font-poppins text-[#EDEDED] leading-8 truncate">{currentProject.name}</h1>
                    <div className="flex items-center gap-1 mt-1">
                        <span className="w-[7px] h-[7px] bg-[#A3E635] rounded-full inline-block"></span>
                        <span className="text-[14px] font-normal font-poppins text-[#EDEDED]/60 leading-5">2 Online</span>
@@ -139,12 +139,12 @@ export function ProjectHub() {
                </div>
             </div>
 
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center ml-auto">
             {currentProject.ownerId === user?.id ? (
               <>
               <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" className="text-[#EDEDED] hover:text-white hover:bg-white/5 font-sans text-[14px] font-normal">
+                  <Button variant="ghost" className="text-[#EDEDED] hover:text-white hover:bg-white/5 font-sans text-[14px] font-normal hidden sm:flex">
                     Editar proyecto
                   </Button>
                 </DialogTrigger>
@@ -220,7 +220,14 @@ export function ProjectHub() {
               
               <Button 
                 variant="outline" 
-                className="w-[40px] h-[36px] bg-[#151518] border-[#2B2B31] rounded-[8px] p-0 hover:bg-[#1f1f22]"
+                onClick={() => setEditDialogOpen(true)}
+                className="w-[40px] h-[36px] bg-[#151518] border-[#2B2B31] rounded-[8px] p-0 hover:bg-[#1f1f22] sm:hidden"
+              >
+                 <Settings className="size-4 text-[#EDEDED]" />
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-[40px] h-[36px] bg-[#151518] border-[#2B2B31] rounded-[8px] p-0 hover:bg-[#1f1f22] hidden sm:flex"
               >
                  <Settings className="size-4 text-[#EDEDED]" />
               </Button>
@@ -229,16 +236,16 @@ export function ProjectHub() {
             ) : (
                 <Button variant="destructive" onClick={handleLeaveProject} className="bg-red-900/20 text-red-500 hover:bg-red-900/40">
                     <LogOut className="size-4 mr-2" />
-                    Abandonar
+                    <span className="hidden sm:inline">Abandonar</span>
                 </Button>
             )}
             </div>
         </div>
       </header>
 
-      <main className="w-[1216px] mx-auto py-8">
+      <main className="max-w-[1216px] w-full mx-auto py-8 px-4 sm:px-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-[#151518] rounded-[14px] p-0 h-[36px] flex items-center w-[303px] mx-auto">
+          <TabsList className="bg-[#151518] rounded-[14px] p-0 h-[36px] flex items-center w-full max-w-[303px] mx-auto">
             <TabsTrigger 
                 value="songs"
                 className="data-[state=active]:bg-[#0B0B0C] data-[state=active]:text-[#EDEDED] data-[state=active]:border data-[state=active]:border-[#2B2B31] data-[state=active]:shadow-none text-[#EDEDED]/60 rounded-[14px] h-[36px] flex-1 font-sans font-normal text-[14px]"

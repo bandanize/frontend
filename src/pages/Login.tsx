@@ -4,7 +4,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { Music2 } from 'lucide-react';
+import Logo from '@/assets/logo.svg';
 
 export function Login() {
   const { login } = useAuth();
@@ -34,7 +34,7 @@ export function Login() {
           <div className="flex items-center justify-center">
             {/* Replaced specific image with Music2 icon but styled to match size/theme approx or just keep icon */}
             <div className="w-[112px] h-[112px] flex items-center justify-center bg-white/5 rounded-full mb-4">
-               <Music2 className="size-16 text-[#EDEDED]" />
+               <img src={Logo} alt="Bandanize Logo" className="size-16" />
             </div>
           </div>
           <CardTitle className="text-[30px] font-bold text-[#EDEDED] font-sans text-center leading-8">Bandanize</CardTitle>
@@ -126,7 +126,7 @@ function Register({ onBack }: { onBack: () => void }) {
         <CardHeader className="space-y-4 flex flex-col items-center p-0 mb-8">
           <div className="flex items-center justify-center">
              <div className="w-[112px] h-[112px] flex items-center justify-center bg-white/5 rounded-full mb-4">
-               <Music2 className="size-16 text-[#EDEDED]" />
+               <img src={Logo} alt="Bandanize Logo" className="size-16" />
             </div>
           </div>
           <CardTitle className="text-[30px] font-bold text-[#EDEDED] font-sans text-center leading-8">Crear cuenta</CardTitle>

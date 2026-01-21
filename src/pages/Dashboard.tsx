@@ -12,6 +12,8 @@ import { WelcomeModal } from '@/app/components/WelcomeModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/app/components/ui/dropdown-menu';
 import { uploadFile } from '@/services/api';
 import { toast } from 'sonner';
+import CookiesImage from '@/assets/cookies.svg';
+import EmptyProjectsImage from '@/assets/empty-projects.svg';
 
 export function Dashboard() {
   const { user, logout } = useAuth();
@@ -76,8 +78,8 @@ export function Dashboard() {
   return (
     <div className="min-h-screen bg-[#0B0B0C] relative">
       {/* Header */}
-      <header className="h-[84px] bg-[#151518] border-b border-black/10 shadow-[0px_1px_3px_rgba(0,0,0,0.1)] flex flex-col justify-center px-[420px]">
-        <div className="w-[1216px] flex justify-between items-center mx-auto">
+      <header className="h-[84px] bg-[#151518] border-b border-black/10 shadow-[0px_1px_3px_rgba(0,0,0,0.1)] flex flex-col justify-center w-full">
+        <div className="max-w-[1216px] w-full flex justify-between items-center mx-auto px-6">
           {/* Logo Section */}
           <div className="flex items-center gap-3">
             <div className="w-[52px] h-[52px] bg-white/10 rounded-full flex items-center justify-center">
@@ -130,10 +132,10 @@ export function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="w-[1280px] mx-auto py-8">
+      <main className="max-w-[1280px] w-full mx-auto py-8 px-6">
         
         {/* Projects Header Row */}
-        <div className="flex justify-between items-center mb-6 w-[1216px] mx-auto h-[36px]">
+        <div className="flex justify-between items-center mb-6 max-w-[1216px] w-full mx-auto h-[36px]">
           <h2 className="text-[20px] font-bold text-[#EDEDED] font-sans leading-7">Tus proyectos</h2>
           
           <Dialog open={open} onOpenChange={setOpen}>
@@ -203,9 +205,9 @@ export function Dashboard() {
 
         {/* Project List or Empty State */}
         {projects.length === 0 ? (
-          <div className="w-[1166px] h-[336px] mx-auto flex flex-col items-center justify-center gap-6">
-            <div className="w-[327px] h-[206px] bg-white/5 rounded-lg flex items-center justify-center">
-                 <Music2 className="size-20 text-[#EDEDED]/20" />
+          <div className="max-w-[1166px] w-full min-h-[336px] mx-auto flex flex-col items-center justify-center gap-6">
+            <div className="w-[327px] h-[206px] flex items-center justify-center">
+                 <img src={EmptyProjectsImage} alt="EmptyProjects" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col items-center gap-1">
                 <h3 className="text-[20px] font-bold text-[#EDEDED] font-sans leading-6 text-center">No tienes proyectos aún</h3>
@@ -220,11 +222,11 @@ export function Dashboard() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-[1216px] mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[1216px] w-full mx-auto">
             {projects.map((project) => (
               <div
                 key={project.id}
-                className="w-[389px] h-[140px] bg-[#151518] border border-[#2B2B31] rounded-[14px] p-[12px] gap-[10px] flex cursor-pointer hover:shadow-lg transition-shadow"
+                className="w-full h-[140px] bg-[#151518] border border-[#2B2B31] rounded-[14px] p-[12px] gap-[10px] flex cursor-pointer hover:shadow-lg transition-shadow"
                 onClick={() => handleProjectClick(project.id)}
               >
                   {/* Image Section */}
@@ -243,8 +245,8 @@ export function Dashboard() {
                   </div>
 
                   {/* Content Section */}
-                  <div className="flex flex-col h-[116px] flex-1 gap-1">
-                      <div className="flex flex-col gap-0.5 flex-1">
+                  <div className="flex flex-col h-[116px] flex-1 gap-1 min-w-0">
+                      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                            <h3 className="text-[16px] font-normal font-poppins text-[#EDEDED] leading-4 truncate">{project.name}</h3>
                            <p className="text-[16px] font-normal font-poppins text-[#EDEDED] leading-6 line-clamp-3 text-ellipsis overflow-hidden h-[72px] opacity-60">
                                {project.description || 'Sin descripción'}
@@ -269,13 +271,13 @@ export function Dashboard() {
       
       {/* Cookies Overlay */}
       {showCookies && (
-          <div className="fixed bottom-4 left-[389px] w-[439px] h-[444px] bg-[#151518] rounded-[14px] flex flex-col justify-end items-center pb-6 shadow-2xl border border-white/5 z-50">
+          <div className="fixed bottom-4 left-4 z-50 w-[calc(100vw-32px)] sm:w-[400px] h-auto bg-[#151518] rounded-[14px] flex flex-col shadow-2xl border border-white/5 overflow-hidden">
              {/* Image placeholder */}
-             <div className="w-[435px] h-[280px] bg-white/5 rounded-t-[12px] flex items-center justify-center">
-                 <Cookie className="size-16 text-[#EDEDED]/20" />
+             <div className="w-full h-[200px] bg-white/5 flex items-center justify-center">
+                 <img src={CookiesImage} alt="Cookies" />
              </div>
              
-             <div className="w-full px-6 pt-4 flex flex-col gap-4">
+             <div className="p-6 flex flex-col gap-4">
                  <div className="flex flex-col gap-2">
                      <h4 className="text-[20px] font-medium font-poppins text-[#EDEDED] leading-6">Cookies & Privacy</h4>
                      <p className="text-[12px] font-normal font-poppins text-[#EDEDED] leading-4">
